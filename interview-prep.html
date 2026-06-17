@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CNTXT Interview Prep — Ahsan Munir</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" integrity="sha384-wH75j6z1lH97ZOpMOInqhgKzFkAInZPPSPlZpYKYTOqsaizPvhQZmAtLcPKXpLyH" crossorigin="anonymous" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js" integrity="sha384-ORwtVEfrCZ0gzGacgmfv1wOtxcPIaVfHKwq8dKQjObRwx3qpKjsSg1ldTu1PEgXd" crossorigin="anonymous"></script>
+<script>hljs.highlightAll();</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #1a1a2e;
+    --blue: #007AFF;
+    --red: #FF3B30;
+    --green: #34C759;
+    --orange: #FF9500;
+    --text: #111;
+    --muted: #666;
+    --border: #e5e5e5;
+    --surface: #f8f8fa;
+    --code-bg: #1e1e2e;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text);
+    line-height: 1.6;
+    background: #fff;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* NAV */
+  .toc { background: var(--surface); border-radius: 14px; padding: 20px 24px; margin-bottom: 48px; }
+  .toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 6px 0; }
+  .toc a { color: var(--blue); text-decoration: none; font-size: 15px; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* HEADER */
+  .header { text-align: center; padding: 40px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .header .logo-ar { font-size: 52px; font-weight: 700; color: var(--navy); direction: rtl; }
+  .header .logo-en { font-size: 20px; color: var(--muted); letter-spacing: 3px; margin-top: 4px; }
+  .header .meta { margin-top: 16px; font-size: 15px; color: var(--muted); }
+  .header .meta strong { color: var(--text); }
+
+  /* SECTIONS */
+  h1 { font-size: 28px; color: var(--navy); margin-bottom: 8px; padding-top: 8px; }
+  h2 { font-size: 20px; color: var(--navy); margin-top: 36px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--navy); }
+  h3 { font-size: 16px; color: var(--navy); margin-top: 24px; margin-bottom: 8px; }
+  p { margin-bottom: 12px; font-size: 15px; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin: 5px 0; font-size: 15px; }
+
+  section { margin-bottom: 56px; }
+
+  /* PITCH BOX */
+  .pitch {
+    background: var(--navy);
+    color: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    font-size: 16px;
+    line-height: 1.8;
+    margin: 20px 0;
+  }
+  .pitch p { color: #e0e8ff; margin-bottom: 16px; }
+  .pitch p:last-child { margin-bottom: 0; }
+
+  /* Q&A */
+  .qa-block {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .qa-q {
+    background: var(--surface);
+    padding: 14px 18px;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--navy);
+    border-left: 4px solid var(--blue);
+  }
+  .qa-q .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-right: 8px;
+  }
+  .tag-hard { background: #ffe5e5; color: var(--red); }
+  .tag-med { background: #fff3e0; color: var(--orange); }
+  .tag-easy { background: #e5f7ed; color: var(--green); }
+  .tag-diff { background: #1a1a2e; color: #fff; }
+  .qa-a {
+    padding: 16px 18px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .qa-a code {
+    background: #f0f0f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'SF Mono', Menlo, monospace;
+    color: #c7254e;
+  }
+
+  /* CODE BLOCKS */
+  pre {
+    border-radius: 12px;
+    margin: 14px 0;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  pre code { padding: 0 !important; }
+
+  /* WARN / TIP / HONEST boxes */
+  .box {
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 15px;
+  }
+  .box-warn { background: #fff8e6; border-left: 4px solid var(--orange); }
+  .box-tip  { background: #e8f5e9; border-left: 4px solid var(--green); }
+  .box-red  { background: #fff0f0; border-left: 4px solid var(--red); }
+  .box-navy { background: #eef2ff; border-left: 4px solid var(--navy); }
+  .box strong { color: var(--navy); }
+
+  /* HONEST TABLE */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { background: var(--navy); color: #fff; padding: 10px 14px; text-align: left; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--surface); }
+  .depth-deep { color: var(--green); font-weight: 600; }
+  .depth-mid { color: var(--orange); font-weight: 600; }
+  .depth-surface { color: var(--red); font-weight: 600; }
+
+  /* KEY POINTS */
+  .kp { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; }
+  .kp-icon { font-size: 18px; min-width: 24px; }
+  .kp-text { font-size: 15px; }
+
+  @media print {
+    body { max-width: 100%; padding: 20px; }
+    .toc { display: none; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo-ar">مُنصت</div>
+  <div class="logo-en">MUNSIT · CNTXT</div>
+  <div class="meta">
+    <strong>Muhammad Ahsan Munir</strong> &nbsp;·&nbsp;
+    Interview Friday 19 June 2026 at 4:00 PM &nbsp;·&nbsp;
+    Mobile Developer (React Native / Expo)
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#pitch">Your 2-Minute Pitch</a></li>
+    <li><a href="#demo">The Demo App — What You Built</a></li>
+    <li><a href="#honest">Be Honest — Know Your Depth</a></li>
+    <li><a href="#audio">Audio (Most Important — Study This)</a></li>
+    <li><a href="#realtime">Real-time: Socket.IO / SSE</a></li>
+    <li><a href="#zustand">Zustand</a></li>
+    <li><a href="#reactquery">React Query</a></li>
+    <li><a href="#rtl">RTL & Arabic</a></li>
+    <li><a href="#performance">Performance (FlashList, Reanimated, Jank)</a></li>
+    <li><a href="#eas">Expo EAS & OTA</a></li>
+    <li><a href="#ai">AI Tooling — Your Biggest Edge</a></li>
+    <li><a href="#ask">Questions to Ask Them</a></li>
+  </ol>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="pitch">
+  <h1>1. Your 2-Minute Pitch</h1>
+  <p>Memorise the structure, not word-for-word. Sound natural.</p>
+
+  <div class="pitch">
+    <p>"I'm Ahsan — Senior React Native developer, based in Dubai, six years in mobile. Right now I'm at OSN, which is the biggest OTT streaming platform in the MENA region, so I've spent the last two and a half years building and shipping to the same audience Munsit serves."</p>
+    <p>"The work I've done at OSN maps directly to what you need: real-time features using WebSockets, subscription management, Fastlane CI/CD automation, Datadog and Firebase monitoring on an app serving millions of users. Performance is something I take seriously — I've profiled memory, improved cold start, and worked on reducing crashes on a high-traffic live product."</p>
+    <p>"What I want to specifically flag: I use Claude Code and Cursor every single day. Not as a novelty — it's genuinely how I work. I think about how to structure codebases, CLAUDE.md files, and tooling so AI agents can be most effective. That combination — mobile expertise plus AI-first workflow — is rare, and I know it's something CNTXT cares about."</p>
+    <p>"To prepare for today I built a working Expo demo this week: live transcription with Zustand store and Arabic RTL switching, an audio recorder using expo-av with real metering, and an audio player with an animated waveform. I'd love to walk you through it."</p>
+  </div>
+
+  <h3>Key Talking Points (if they ask follow-ups)</h3>
+  <div class="kp"><span class="kp-icon">🏢</span><span class="kp-text"><strong>OSN scale:</strong> MENA OTT — you know this region, you've shipped to Arab users, you understand the market Munsit is targeting.</span></div>
+  <div class="kp"><span class="kp-icon">⚡</span><span class="kp-text"><strong>Real-time:</strong> WebSockets at OSN for live features; at Artistic Denim built real-time video with AWS Chime. The networking model is the same as transcription streaming.</span></div>
+  <div class="kp"><span class="kp-icon">🤖</span><span class="kp-text"><strong>AI tooling:</strong> Daily Claude Code user — you literally use this exact tool for your job hunt. You understand MCP servers, CLAUDE.md, skills, and how to make AI agents navigate codebases. This is a real differentiator.</span></div>
+  <div class="kp"><span class="kp-icon">📱</span><span class="kp-text"><strong>Expo:</strong> Built Peredion app with Expo. Familiar with Managed and Bare workflow. Just migrated a project off expo-router this week to plain React Navigation.</span></div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="demo">
+  <h1>2. The Demo App</h1>
+  <p>Show this on your phone or simulator. Walk through each screen with confidence.</p>
+
+  <table>
+    <tr><th>Screen</th><th>What it demonstrates</th><th>Key tech to mention</th></tr>
+    <tr>
+      <td><strong>Live Transcription</strong></td>
+      <td>Word-by-word streaming (simulates Socket.IO), EN↔AR RTL toggle, pulsing record button</td>
+      <td>Zustand, RTL, writingDirection, useRef streaming pattern</td>
+    </tr>
+    <tr>
+      <td><strong>Record & Playback</strong></td>
+      <td>Real expo-av recording, amplitude metering → animated bars, playback with status callbacks</td>
+      <td>Audio.Recording, AVAudioSession, metering, unloadAsync</td>
+    </tr>
+    <tr>
+      <td><strong>Audio Player UI</strong></td>
+      <td>Animated waveform, seek ±15s, progress, playback speed buttons</td>
+      <td>Animated API, setInterval, progress tracking</td>
+    </tr>
+    <tr>
+      <td><strong>Search & List</strong></td>
+      <td>Real API (dummyjson), search filter, infinite scroll / pagination</td>
+      <td>FlatList, onEndReached, loading states</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="honest">
+  <h1>3. Be Honest — Know Your Depth</h1>
+
+  <div class="box box-red">
+    <strong>The golden rule:</strong> If they ask about something you've only touched at the surface level, say <em>"I've worked with it at the integration level"</em> or <em>"I've used it as part of a team setup"</em>. Never claim deep expertise you can't back up with specifics — it always gets exposed.
+  </div>
+
+  <table>
+    <tr>
+      <th>Technology</th>
+      <th>Honest Depth</th>
+      <th>What to say if asked</th>
+    </tr>
+    <tr>
+      <td>React Native core</td>
+      <td class="depth-deep">Deep</td>
+      <td>6 years, production apps, bridge architecture, native modules — you know this.</td>
+    </tr>
+    <tr>
+      <td>TypeScript</td>
+      <td class="depth-deep">Deep</td>
+      <td>Daily use. Can discuss generics, utility types, discriminated unions.</td>
+    </tr>
+    <tr>
+      <td>Redux Toolkit</td>
+      <td class="depth-deep">Deep</td>
+      <td>Primary state tool at OSN. RTK Query, createSlice, createAsyncThunk.</td>
+    </tr>
+    <tr>
+      <td>Expo (Managed/Bare)</td>
+      <td class="depth-mid">Mid</td>
+      <td>Built projects with both workflows. expo-router is newer for you — "been studying it this week".</td>
+    </tr>
+    <tr>
+      <td>Zustand</td>
+      <td class="depth-mid">Mid</td>
+      <td>Listed in your skills, built a store for this demo. Honest: less production hours than Redux.</td>
+    </tr>
+    <tr>
+      <td>React Query / TanStack</td>
+      <td class="depth-surface">Surface</td>
+      <td>"I understand the model — server state caching, staleTime, background refetch. I've studied it but my production experience is with RTK Query which solves the same problem."</td>
+    </tr>
+    <tr>
+      <td>Reanimated</td>
+      <td class="depth-mid">Mid</td>
+      <td>Used for animations. Know the worklet model and why it's faster than Animated. Less experience with complex gesture handlers.</td>
+    </tr>
+    <tr>
+      <td>FlashList</td>
+      <td class="depth-surface">Surface</td>
+      <td>"I know why it's faster — recycling vs remounting — and I've read the API. Haven't shipped it in production, but FlatList migration is straightforward."</td>
+    </tr>
+    <tr>
+      <td>Socket.IO / SSE</td>
+      <td class="depth-mid">Mid</td>
+      <td>WebSocket experience at OSN. Socket.IO adds reconnection, rooms, namespaces on top. SSE for one-way streaming — you built a simulation of this in the demo.</td>
+    </tr>
+    <tr>
+      <td>expo-av / Audio</td>
+      <td class="depth-surface">New</td>
+      <td>"New to me this week — I studied it and built a working demo with recording, metering, and playback." Show AudioDemoScreen. Being honest here builds trust.</td>
+    </tr>
+    <tr>
+      <td>EAS / OTA</td>
+      <td class="depth-mid">Mid</td>
+      <td>Understand the model. Fastlane CI/CD at OSN (similar release automation). OTA with runtime versioning — studied this week.</td>
+    </tr>
+    <tr>
+      <td>SwiftUI</td>
+      <td class="depth-surface">Surface</td>
+      <td>"I've written basic SwiftUI views and bridged them to React Native as native components. Not a full SwiftUI app developer."</td>
+    </tr>
+    <tr>
+      <td>Kotlin</td>
+      <td class="depth-surface">Basic</td>
+      <td>CV says basic — be consistent. "I've written Android native modules in Java/Kotlin, not full Android apps."</td>
+    </tr>
+    <tr>
+      <td>Datadog / Conviva</td>
+      <td class="depth-mid">Integration</td>
+      <td>"I integrated the SDKs and read the dashboards. The deep alerting setup was done by the platform team — I consumed the tooling."</td>
+    </tr>
+    <tr>
+      <td>Fastlane</td>
+      <td class="depth-mid">Mid</td>
+      <td>"Set up and maintained lanes for iOS/Android builds and distribution. Not a CI infrastructure expert but comfortable with Fastfiles."</td>
+    </tr>
+    <tr>
+      <td>NativeWind</td>
+      <td class="depth-surface">Surface</td>
+      <td>"Same Tailwind utility classes applied to React Native. I use Tailwind on the web — NativeWind is familiar to pick up."</td>
+    </tr>
+    <tr>
+      <td>RevenueCat</td>
+      <td class="depth-surface">Surface</td>
+      <td>"Haven't used RevenueCat specifically, but I've implemented subscription flows with Stripe and custom billing at OSN — the subscription lifecycle concepts are the same."</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="audio">
+  <h1>4. Audio (Most Important — Study This)</h1>
+
+  <div class="box box-red">
+    <strong>This is the core of Munsit.</strong> Expect a coding task or deep questions here. You built AudioDemoScreen.tsx — know every line.
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">Hard</span> Walk me through implementing audio recording in Expo/React Native.</div>
+    <div class="qa-a">
+      <p>Five steps, in order:</p>
+      <ol>
+        <li><strong>Request permission</strong> — <code>Audio.requestPermissionsAsync()</code></li>
+        <li><strong>Configure AVAudioSession (iOS critical)</strong> — <code>Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })</code>. Without this, recording fails on iOS or is silent.</li>
+        <li><strong>Prepare recording</strong> — <code>new Audio.Recording()</code> then <code>prepareToRecordAsync</code> with preset + <code>isMeteringEnabled: true</code></li>
+        <li><strong>Start + meter</strong> — <code>startAsync()</code>, attach <code>setOnRecordingStatusUpdate</code> to get dBFS amplitude every 100ms</li>
+        <li><strong>Stop + get URI</strong> — <code>stopAndUnloadAsync()</code> then <code>getURI()</code></li>
+      </ol>
+      <p>Then reset audio mode for playback (<code>allowsRecordingIOS: false</code>) before loading the Sound.</p>
+    </div>
+  </div>
+
+  <h3>Full Recording + Playback Code</h3>
+<pre><code class="language-typescript">import { Audio, AVPlaybackStatus } from 'expo-av';
+
+// ── 1. Permissions ──────────────────────────────────────────────────────────
+const { granted } = await Audio.requestPermissionsAsync();
+if (!granted) return;
+
+// ── 2. Configure iOS audio session ──────────────────────────────────────────
+await Audio.setAudioModeAsync({
+  allowsRecordingIOS: true,
+  playsInSilentModeIOS: true,       // still records on silent mode
+  staysActiveInBackground: false,
+});
+
+// ── 3. Create and prepare recording ─────────────────────────────────────────
+const recording = new Audio.Recording();
+await recording.prepareToRecordAsync({
+  ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+  isMeteringEnabled: true,           // needed for amplitude
+});
+
+// ── 4. Subscribe to metering (amplitude visualisation) ──────────────────────
+recording.setOnRecordingStatusUpdate((status) => {
+  if (!status.isRecording) return;
+  // metering is dBFS: -160 (silence) → 0 (peak)
+  // useful range is typically -60 → 0
+  const amplitude = Math.max(0, (status.metering! + 60) / 60); // 0–1
+  setAmplitude(amplitude);
+});
+recording.setProgressUpdateInterval(100); // ms
+
+// ── 5. Start ─────────────────────────────────────────────────────────────────
+await recording.startAsync();
+
+// ── 6. Stop ──────────────────────────────────────────────────────────────────
+await recording.stopAndUnloadAsync();
+const uri = recording.getURI(); // local file:// path
+
+// ── 7. Reset audio mode for playback ────────────────────────────────────────
+await Audio.setAudioModeAsync({
+  allowsRecordingIOS: false,
+  playsInSilentModeIOS: true,
+});
+
+// ── 8. Load and play ─────────────────────────────────────────────────────────
+const { sound } = await Audio.Sound.createAsync({ uri });
+
+sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+  if (!status.isLoaded) return;
+  if (status.didJustFinish) {
+    sound.unloadAsync(); // ALWAYS unload — prevents memory leaks
+  }
+});
+
+await sound.playAsync();
+</code></pre>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">Hard</span> What is AVAudioSession and why does it matter?</div>
+    <div class="qa-a">
+      <p>AVAudioSession is iOS's audio routing and categorisation system. It tells the OS what your app is doing with audio so it can make decisions about interruptions, routing (speaker vs earpiece vs Bluetooth), and background behaviour.</p>
+      <p>If you don't set <code>allowsRecordingIOS: true</code> before recording, iOS won't give you mic access even if permission is granted. If you don't set <code>playsInSilentModeIOS: true</code>, recordings fail on a device in silent mode. After recording you must reset to <code>allowsRecordingIOS: false</code> otherwise playback goes through the earpiece instead of the speaker.</p>
+      <p>On Android this is handled differently (AudioManager focus) but expo-av wraps both platforms.</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">Med</span> How would you upload a recording to a server?</div>
+    <div class="qa-a">
+<pre><code class="language-typescript">const uri = recording.getURI(); // local file path
+
+const formData = new FormData();
+formData.append('audio', {
+  uri,
+  name: 'recording.m4a',
+  type: 'audio/m4a',
+} as any);
+
+const response = await fetch('https://api.munsit.ai/transcribe', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${token}` },
+  body: formData,
+});
+const { transcript } = await response.json();
+</code></pre>
+      <p>For large files or streaming, use a chunked upload or a pre-signed S3 URL (like we did at Artistic Denim with AWS S3).</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">Hard</span> How would you stream audio chunks for real-time transcription?</div>
+    <div class="qa-a">
+      <p>Two approaches:</p>
+      <ol>
+        <li><strong>WebSocket (bidirectional):</strong> Record in chunks (segment-based or time-based), send each chunk as binary over WebSocket. Server transcribes and pushes text back on the same connection. Best for low-latency.</li>
+        <li><strong>SSE + file upload:</strong> Upload the whole file, subscribe to SSE stream for progressive results. Simpler but not truly real-time.</li>
+      </ol>
+      <p>Munsit likely uses WebSocket or Socket.IO for this. The recording side would use a native module (not expo-av directly) for chunk-by-chunk PCM access, or send the m4a file and let the server handle chunking.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="realtime">
+  <h1>5. Real-time: Socket.IO / SSE</h1>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">Hard</span> WebSocket vs SSE — when do you choose each?</div>
+    <div class="qa-a">
+      <p><strong>SSE (Server-Sent Events):</strong> Server → client only. One HTTP connection. Auto-reconnects. Use when you only need to receive data (transcription results, live subtitles, feed updates).</p>
+      <p><strong>WebSocket:</strong> Bidirectional, full-duplex. Use when the client also sends data over the same channel (sending audio chunks, heartbeats, control messages).</p>
+      <p><strong>For Munsit specifically:</strong> Probably WebSocket — client sends audio, server pushes transcript words. Socket.IO wraps WebSocket and adds rooms, namespaces, reconnection, and fallback to polling.</p>
+    </div>
+  </div>
+
+  <h3>SSE Consumer (React Native)</h3>
+<pre><code class="language-typescript">// React Native doesn't have EventSource — use fetch with streaming
+async function subscribeToTranscript(sessionId: string, onWord: (word: string) => void) {
+  const response = await fetch(`https://api.munsit.ai/sessions/${sessionId}/stream`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    // SSE format: "data: <json>\n\n"
+    const lines = chunk.split('\n').filter((l) => l.startsWith('data: '));
+    for (const line of lines) {
+      const payload = JSON.parse(line.slice(6));
+      if (payload.word) onWord(payload.word);
+    }
+  }
+}
+</code></pre>
+
+  <h3>Socket.IO Client</h3>
+<pre><code class="language-typescript">import { io, Socket } from 'socket.io-client';
+
+const socket: Socket = io('https://api.munsit.ai', {
+  transports: ['websocket'],       // skip long-polling for mobile
+  auth: { token },
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+});
+
+socket.on('connect', () => console.log('connected', socket.id));
+socket.on('transcript:word', (data: { word: string; isFinal: boolean }) => {
+  if (data.isFinal) store.flushLive();
+  else store.appendWord(data.word);
+});
+socket.on('disconnect', (reason) => {
+  if (reason === 'io server disconnect') socket.connect(); // forced disconnect — reconnect manually
+});
+
+// Cleanup
+socket.disconnect();
+</code></pre>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="zustand">
+  <h1>6. Zustand</h1>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-easy">Easy</span> How does Zustand differ from Redux Toolkit?</div>
+    <div class="qa-a">
+      <p><strong>Redux Toolkit:</strong> Boilerplate-reduced Redux. Still actions, reducers, dispatch. Good for complex state with many reducers, middleware (RTK Query, logging), and dev tools.</p>
+      <p><strong>Zustand:</strong> Direct mutation (via immer internally), no boilerplate, no Provider needed. Just a hook. Smaller bundle, simpler code. Better for localised feature state.</p>
+      <p>For Munsit they likely use Zustand for UI state (recording state, active transcription session) and React Query for server state (API calls, caching).</p>
+    </div>
+  </div>
+
+  <h3>Zustand Store Pattern (what you built)</h3>
+<pre><code class="language-typescript">import { create } from 'zustand';
+
+type Language = 'en' | 'ar';
+
+interface TranscriptionStore {
+  segments: Segment[];
+  liveText: string;
+  isRecording: boolean;
+  language: Language;
+  // actions
+  appendWord: (word: string) => void;
+  flushLive: () => void;
+  setRecording: (v: boolean) => void;
+  setLanguage: (lang: Language) => void;
+  clear: () => void;
+}
+
+export const useTranscriptionStore = create<TranscriptionStore>((set, get) => ({
+  segments: [],
+  liveText: '',
+  isRecording: false,
+  language: 'en',
+
+  appendWord: (word) =>
+    set((s) => ({ liveText: s.liveText ? `${s.liveText} ${word}` : word })),
+
+  flushLive: () => {
+    const { liveText, language } = get(); // get() reads current state synchronously
+    if (!liveText.trim()) return;
+    set((s) => ({
+      segments: [...s.segments, { id: Date.now().toString(), text: liveText, language }],
+      liveText: '',
+    }));
+  },
+
+  setRecording: (isRecording) => set({ isRecording }),
+  setLanguage: (language) => set({ language }),
+  clear: () => set({ segments: [], liveText: '', isRecording: false }),
+}));
+
+// Usage in component:
+// const { liveText, appendWord } = useTranscriptionStore();
+// Or select only what you need (avoids unnecessary re-renders):
+// const liveText = useTranscriptionStore((s) => s.liveText);
+</code></pre>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">Med</span> How do you handle async actions in Zustand?</div>
+    <div class="qa-a">
+<pre><code class="language-typescript">// Async actions go directly in the store — no middleware needed
+const useStore = create<Store>((set) => ({
+  data: null,
+  loading: false,
+  error: null,
+
+  fetchData: async (id: string) => {
+    set({ loading: true, error: null });
+    try {
+      const data = await api.getData(id);
+      set({ data, loading: false });
+    } catch (err) {
+      set({ error: err as Error, loading: false });
+    }
+  },
+}));
+</code></pre>
+      <p>For complex async flows (dependent queries, caching, background refetch) reach for React Query instead — that's exactly what it's built for.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="reactquery">
+  <h1>7. React Query (TanStack Query)</h1>
+
+  <div class="box box-navy">
+    <strong>Honest position:</strong> You know the model well, production experience is with RTK Query which is conceptually identical. Frame it that way.
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">Med</span> Explain staleTime vs gcTime (cacheTime in v4)</div>
+    <div class="qa-a">
+      <p><strong>staleTime:</strong> How long cached data is considered fresh. During this window, no background refetch happens. Default: 0 (always stale = always refetch on mount).</p>
+      <p><strong>gcTime (formerly cacheTime):</strong> How long unused/inactive query data stays in memory before being garbage collected. Default: 5 minutes.</p>
+      <p>Example: <code>staleTime: 60_000</code> means data fetched in the last minute is reused without a network call.</p>
+    </div>
+  </div>
+
+  <h3>Infinite Scroll with React Query</h3>
+<pre><code class="language-typescript">import { useInfiniteQuery } from '@tanstack/react-query';
+
+const {
+  data,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+} = useInfiniteQuery({
+  queryKey: ['transcriptions', userId],
+  queryFn: ({ pageParam = 0 }) =>
+    api.getTranscriptions({ skip: pageParam, limit: 10 }),
+
+  getNextPageParam: (lastPage, allPages) =>
+    lastPage.hasMore ? allPages.length * 10 : undefined,
+});
+
+const allItems = data?.pages.flatMap((p) => p.items) ?? [];
+
+// In FlatList:
+// onEndReached={() => hasNextPage && fetchNextPage()}
+// ListFooterComponent={isFetchingNextPage ? &lt;ActivityIndicator /&gt; : null}
+</code></pre>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="rtl">
+  <h1>8. RTL & Arabic</h1>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">Med</span> How do you implement RTL in React Native?</div>
+    <div class="qa-a">
+      <p>Two levels:</p>
+      <p><strong>App-level flip</strong> (mirrors everything):</p>
+<pre><code class="language-typescript">import { I18nManager } from 'react-native';
+
+// Call once at startup (requires app restart to take effect)
+I18nManager.forceRTL(true);
+I18nManager.allowRTL(true);
+</code></pre>
+      <p><strong>Per-component RTL</strong> (what you built — toggles per text):</p>
+<pre><code class="language-typescript">// For Arabic text specifically:
+&lt;Text style={{
+  textAlign: 'right',
+  writingDirection: 'rtl',   // iOS
+}}&gt;
+  مرحباً بك في مُنصت
+&lt;/Text&gt;
+
+// Flex layout mirrors automatically when RTL is active
+// START = right, END = left in RTL
+// Avoid hardcoded 'left'/'right' — use 'start'/'end' or 'flex-start'/'flex-end'
+</code></pre>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">Med</span> Common RTL pitfalls?</div>
+    <div class="qa-a">
+      <ul>
+        <li><strong>Icons that shouldn't flip</strong> — back arrows flip correctly, but checkmarks, play buttons shouldn't. Use <code>transform: [{{ scaleX: isRTL ? -1 : 1 }}]</code> to selectively prevent flip.</li>
+        <li><strong>Hardcoded left/right margins</strong> — use <code>marginStart</code>/<code>marginEnd</code> instead of <code>marginLeft</code>/<code>marginRight</code>.</li>
+        <li><strong>Absolute positioning</strong> — <code>left: 0</code> doesn't flip automatically. Use <code>start: 0</code> (React Native 0.65+).</li>
+        <li><strong>Arabic fonts</strong> — system fonts on iOS/Android handle Arabic fine. Avoid custom fonts unless they support Arabic glyphs.</li>
+        <li><strong>Numbers in Arabic text</strong> — Arabic-Indic vs Western numerals. Usually keep Western (0-9) for timestamps and counts.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="performance">
+  <h1>9. Performance</h1>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">Hard</span> FlashList vs FlatList — explain the difference and when to use FlashList</div>
+    <div class="qa-a">
+      <p><strong>FlatList</strong> mounts new React components as items scroll into view and unmounts them when they leave. The JS thread does this work. For short lists (&lt;100 items) this is fine.</p>
+      <p><strong>FlashList</strong> (from Shopify) recycles cell components — like RecyclerView on Android. It reuses existing component instances and updates their data. This means no mount/unmount overhead. 10x faster initial render on long lists.</p>
+      <p><strong>Migration:</strong> Drop-in replacement. Change <code>FlatList</code> → <code>FlashList</code>, add <code>estimatedItemSize</code> prop (average item height in px). FlashList will warn you if the estimate is very wrong.</p>
+<pre><code class="language-typescript">import { FlashList } from '@shopify/flash-list';
+
+&lt;FlashList
+  data={transcriptions}
+  renderItem={({ item }) =&gt; &lt;TranscriptionRow item={item} /&gt;}
+  keyExtractor={(item) =&gt; item.id}
+  estimatedItemSize={64}       // required — average row height
+  onEndReached={loadMore}
+  onEndReachedThreshold={0.5}
+/&gt;
+</code></pre>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">Hard</span> Why is Reanimated faster than the built-in Animated API?</div>
+    <div class="qa-a">
+      <p>The built-in <code>Animated</code> API runs animation logic on the <strong>JS thread</strong> and communicates each frame to the <strong>UI thread</strong> over the bridge. If the JS thread is busy (rendering, API calls), animations stutter.</p>
+      <p><code>Animated</code> with <code>useNativeDriver: true</code> moves the animation to the UI thread, but only works for <code>transform</code> and <code>opacity</code>.</p>
+      <p><strong>Reanimated 2/3</strong> uses <strong>Worklets</strong> — small JS functions compiled by Hermes to run directly on the UI thread. This means all animation logic runs on the UI thread with no bridge crossing. Smooth 60fps even when JS is busy. Supports any style property (not just transform/opacity).</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">Med</span> How do you debug jank (dropped frames)?</div>
+    <div class="qa-a">
+      <ol>
+        <li><strong>Flipper</strong> — React Native performance monitor shows JS and UI frame rates separately. Identifies which thread is dropping frames.</li>
+        <li><strong>React DevTools Profiler</strong> — shows which components re-render and how long they take.</li>
+        <li><strong>Instruments (iOS)</strong> — Time Profiler for native CPU, Allocations for memory leaks.</li>
+        <li><strong>Systrace / Perfetto (Android)</strong> — native trace with method timing.</li>
+        <li><strong>FPS Monitor in Dev Menu</strong> — quick check while using the app.</li>
+      </ol>
+      <p>Common culprits: expensive <code>renderItem</code>, missing <code>keyExtractor</code>, large lists without FlashList, inline functions/objects creating new references on every render, heavy images not cached.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="eas">
+  <h1>10. Expo EAS & OTA Updates</h1>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">Med</span> What is EAS Build and how does it differ from classic expo build?</div>
+    <div class="qa-a">
+      <p><code>expo build</code> (deprecated) used Expo's managed build service but had limited customisation and forced you into Managed workflow.</p>
+      <p><strong>EAS Build</strong> runs on Expo's cloud infrastructure but supports <strong>any</strong> project including bare React Native. You control the build environment via <code>eas.json</code>. Supports custom native code, local credentials, and can run your own scripts.</p>
+<pre><code class="language-json">// eas.json
+{
+  "build": {
+    "development": { "developmentClient": true, "distribution": "internal" },
+    "preview": { "distribution": "internal" },
+    "production": { "autoIncrement": true }
+  }
+}
+</code></pre>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">Hard</span> What is runtime version and why does it matter for OTA?</div>
+    <div class="qa-a">
+      <p>OTA (expo-updates) pushes a new JS bundle to users without a store release. But if your update requires new native code (a new Expo module, a new permission), and the user hasn't updated the app binary, the new JS will crash.</p>
+      <p><strong>Runtime version</strong> ties a JS bundle to a specific native binary. When you add native code, you bump the runtime version. The OTA service only delivers updates to devices with a matching runtime version. Old binary = old JS. New binary = new JS.</p>
+<pre><code class="language-json">// app.json
+{
+  "expo": {
+    "runtimeVersion": {
+      "policy": "appVersion"   // auto: runtime = app version
+    }
+  }
+}
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="ai">
+  <h1>11. AI Tooling — Your Biggest Differentiator</h1>
+
+  <div class="box box-tip">
+    <strong>This is where you stand out.</strong> Most mobile devs "use Copilot sometimes." You use Claude Code as your primary development interface, every day. Say this clearly.
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-diff">Differentiator</span> How do you use AI coding tools in your daily workflow?</div>
+    <div class="qa-a">
+      <p>"Claude Code is my primary interface — not just autocomplete, it's how I navigate and modify large codebases. I write <code>CLAUDE.md</code> files to give it codebase context so it doesn't rediscover things every session. I set up hooks for repeated operations — like running the linter or tests before commits. I use MCP servers to connect Claude to Figma, Postman, GitHub directly."</p>
+      <p>"The difference between good and great AI-assisted development is structuring your code so the agent can reason about it: small focused files, strong TypeScript types, no magic globals, clear module boundaries. I actively think about this."</p>
+      <p>"On this specific project for today's interview, I used Claude Code to wire up React Navigation, build the Zustand store, and write the expo-av demo — and then read and understood every line rather than just copying."</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-diff">Differentiator</span> How would you improve the team's dev workflow with AI tooling?</div>
+    <div class="qa-a">
+      <ul>
+        <li><strong>CLAUDE.md / AGENTS.md</strong> in the monorepo — describes the stack, conventions, and how to run things. Every developer (and every AI session) starts informed.</li>
+        <li><strong>MCP servers</strong> — connect Claude Code to your internal API docs, Figma designs, Linear issues. No more copy-pasting context.</li>
+        <li><strong>Custom skills / hooks</strong> — automate common patterns: "create a new screen" scaffolds the file, adds the route, updates the type. Run as a Claude skill.</li>
+        <li><strong>Agent-friendly code style</strong> — small files, explicit types, no barrel file magic. Agents navigate typed, modular code much better.</li>
+        <li><strong>Review the AI's work</strong> — teach the team to verify, not just accept. AI tools are fast but they hallucinate. Review diffs like you review a junior dev's PR.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="ask">
+  <h1>12. Questions to Ask Them</h1>
+
+  <p>Ask 2–3 at the end. Pick the ones you're genuinely curious about.</p>
+
+  <div class="box box-navy">
+    <strong>Product / Technical</strong>
+    <ul style="margin-top:10px">
+      <li>"How does Munsit handle real-time transcription on-device vs server-side? Do you run any models on-device for latency?"</li>
+      <li>"What's the biggest technical challenge you're facing on the mobile side right now?"</li>
+      <li>"The JD mentions a custom Arabic keyboard as a native iOS extension and Android IME — is that something I'd be contributing to, or is it maintained separately?"</li>
+      <li>"What's the current test coverage like on the mobile app? Any E2E testing?"</li>
+    </ul>
+  </div>
+
+  <div class="box box-navy">
+    <strong>Team / Process</strong>
+    <ul style="margin-top:10px">
+      <li>"How many engineers are on the mobile team right now, and how does feature work get divided between mobile and the API team?"</li>
+      <li>"You mentioned AI tooling is part of the daily workflow — what does that look like in practice? Is Claude Code already set up across the team?"</li>
+      <li>"How do you handle release coordination across iOS, Android, and the web dashboard?"</li>
+    </ul>
+  </div>
+
+  <div class="box box-navy">
+    <strong>Role Clarity</strong>
+    <ul style="margin-top:10px">
+      <li>"What would success look like for this role in the first 90 days?"</li>
+      <li>"Is there a specific feature or area of the app you're hoping someone new can own quickly?"</li>
+    </ul>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div style="text-align:center; padding: 40px 0 20px; color: #bbb; font-size: 13px; border-top: 1px solid var(--border); margin-top: 40px;">
+  Muhammad Ahsan Munir &nbsp;·&nbsp; ahsanmuneer81@gmail.com &nbsp;·&nbsp; +971 50 150 3754<br/>
+  CNTXT / Munsit Interview &nbsp;·&nbsp; Friday 19 June 2026
+</div>
+
+</body>
+</html>
