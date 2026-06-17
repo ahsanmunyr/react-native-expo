@@ -194,20 +194,53 @@
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <section id="pitch">
   <h1>1. Your 2-Minute Pitch</h1>
-  <p>Memorise the structure, not word-for-word. Sound natural.</p>
+  <p>Don't memorise word-for-word — know the <strong>4 beats</strong> and speak naturally. Practice saying it out loud tonight.</p>
 
-  <div class="pitch">
-    <p>"I'm Ahsan — Senior React Native developer, based in Dubai, six years in mobile. Right now I'm at OSN, which is the biggest OTT streaming platform in the MENA region, so I've spent the last two and a half years building and shipping to the same audience Munsit serves."</p>
-    <p>"The work I've done at OSN maps directly to what you need: real-time features using WebSockets, subscription management, Fastlane CI/CD automation, Datadog and Firebase monitoring on an app serving millions of users. Performance is something I take seriously — I've profiled memory, improved cold start, and worked on reducing crashes on a high-traffic live product."</p>
-    <p>"What I want to specifically flag: I use Claude Code and Cursor every single day. Not as a novelty — it's genuinely how I work. I think about how to structure codebases, CLAUDE.md files, and tooling so AI agents can be most effective. That combination — mobile expertise plus AI-first workflow — is rare, and I know it's something CNTXT cares about."</p>
-    <p>"To prepare for today I built a working Expo demo this week: live transcription with Zustand store and Arabic RTL switching, an audio recorder using expo-av with real metering, and an audio player with an animated waveform. I'd love to walk you through it."</p>
+  <div class="box box-navy" style="margin-bottom:16px">
+    <strong>4 beats:</strong> Who I am → What I've built (work + personal) → How I work (AI tools) → Why Munsit specifically
   </div>
 
-  <h3>Key Talking Points (if they ask follow-ups)</h3>
-  <div class="kp"><span class="kp-icon">🏢</span><span class="kp-text"><strong>OSN scale:</strong> MENA OTT — you know this region, you've shipped to Arab users, you understand the market Munsit is targeting.</span></div>
-  <div class="kp"><span class="kp-icon">⚡</span><span class="kp-text"><strong>Real-time:</strong> WebSockets at OSN for live features; at Artistic Denim built real-time video with AWS Chime. The networking model is the same as transcription streaming.</span></div>
-  <div class="kp"><span class="kp-icon">🤖</span><span class="kp-text"><strong>AI tooling:</strong> Daily Claude Code user — you literally use this exact tool for your job hunt. You understand MCP servers, CLAUDE.md, skills, and how to make AI agents navigate codebases. This is a real differentiator.</span></div>
-  <div class="kp"><span class="kp-icon">📱</span><span class="kp-text"><strong>Expo:</strong> Built Peredion app with Expo. Familiar with Managed and Bare workflow. Just migrated a project off expo-router this week to plain React Navigation.</span></div>
+  <div class="pitch">
+    <p>"I'm Ahsan, Senior React Native developer based in Dubai, six years in mobile. Currently at OSN — the largest OTT streaming platform in MENA — where I've been building and shipping to millions of users across the Arab world for the past two and a half years."</p>
+
+    <p>"Outside of OSN I build things on my own. Right now I'm working on a personal project called myosntv — a package subscription app in React Native, basically a custom OTT client with subscription management built from scratch. Before that I shipped Peredion, a sports prediction platform built with Expo; LosPollos, a full food delivery app — 45 screens, full architecture, API integration, solo; and Orb-Ed X, a school platform for kids and parents covering live classes, attendance, grades, and push notifications. I like owning complete products, not just writing tickets."</p>
+
+    <p>"At work the experience that maps most directly to Munsit: real-time features with WebSockets, subscription billing flows, Fastlane CI/CD, Datadog and Firebase monitoring at scale, and native module integration when React Native couldn't do it alone. At Artistic Denim before OSN I built real-time video with AWS Chime and Vision Camera — same networking model as live transcription streaming."</p>
+
+    <p>"On the AI tooling side — I use Claude Code and Cursor as my primary development interface, every day. When I hit API limits I switch to Qwen2.5 Coder running locally on my M4 Pro — so I actually have a co-worker that never stops. I think about how to structure code so agents can navigate it: CLAUDE.md files, strong TypeScript types, modular files, MCP server integrations. That's genuinely how I work, not something I do occasionally."</p>
+
+    <p>"I built a demo this week specifically for today — live transcription with Zustand and Arabic RTL, real audio recording with expo-av and amplitude metering, an audio player UI. Happy to show you."</p>
+  </div>
+
+  <h3>If They Ask — Expand on Each Beat</h3>
+
+  <div class="qa-block">
+    <div class="qa-q">Tell me more about your current role at OSN</div>
+    <div class="qa-a">
+      <p>"OSN is a subscription OTT platform — think Netflix for the Arab world. The mobile app runs on iOS and Android, React Native with SwiftUI for native components where needed. I've worked on the subscription and payment flows, integrated Conviva for video analytics and Datadog for crash monitoring, and automated the release pipeline with Fastlane so we're not manually touching Xcode archives every release. The scale forces you to care about performance — I've profiled memory, reduced cold-start time, and worked on crash stability across a large active user base."</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">Tell me about myosntv and your personal projects</div>
+    <div class="qa-a">
+      <p>"myosntv is a package subscription app I'm building in React Native — custom OTT client, subscription management, the full thing. It started because I wanted to understand subscription flows end to end without the constraints of a company codebase. Before that: Peredion was a sports prediction platform on Expo that pulled thousands of global markets; LosPollos was a 45-screen food delivery app I built completely solo from architecture to API integration; Orb-Ed X was a school platform for parents and kids with live classes and push notifications. I build things outside work because it's how I actually learn — you can't fake shipping a full app."</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How do you use AI tools — specifically</div>
+    <div class="qa-a">
+      <p>"Claude Code is my main interface. I write CLAUDE.md files in my projects so the agent has context without me re-explaining things every session. I use MCP servers to connect it directly to Figma, GitHub, Postman. I set up hooks for repetitive tasks — lint on save, run tests before commit. When I hit Claude's usage limits, I switch to Qwen2.5 Coder running locally on my M4 Pro — it's a strong open-source coding model and running it local means zero latency, zero API cost, never blocked. So I basically have an AI co-worker that's always available. The difference I've noticed between developers who get value from these tools and ones who don't is how they structure their code — small files, explicit types, clear boundaries. Agents navigate that well. Magic globals and barrel files, not so much."</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">Why Munsit specifically</div>
+    <div class="qa-a">
+      <p>"Two reasons. First, I've been building for the MENA region at OSN for two and a half years — I understand this audience, I understand what it means to ship to Arabic speakers, and Munsit is specifically solving a hard problem for that market. Second, the stack and the problems are exactly what I find interesting: real-time audio, native platform features, AI-assisted workflows as a first-class concern. Most companies treat AI tooling as a bonus. You've made it part of the job description. That's where I want to work."</p>
+    </div>
+  </div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
