@@ -205,7 +205,7 @@
 
     <p>"At OSN the app I work on day to day is myosntv — a package subscription OTT streaming app in React Native. That's the main product, that's why I'm there. Subscription management, payment flows, live content, millions of users across MENA. Outside of that I've shipped personal projects: Peredion, a sports prediction platform on Expo; LosPollos, a full food delivery app — 45 screens, built completely solo; and Orb-Ed X, a school platform for kids and parents with live classes, attendance, and push notifications. I like owning complete products end to end."</p>
 
-    <p>"At work the experience that maps most directly to Munsit: subscription billing flows, Firebase Crashlytics for crash monitoring, Firebase push notifications, Conviva for video analytics, Fastlane CI/CD, and native module integration. At Artistic Denim before OSN I built a video feature similar to Banuba — AR-style effects, merging video and audio tracks using FFmpeg, capturing with the React Native Camera SDK. That's real media pipeline work."</p>
+    <p>"At OSN the specific things I built: Kontent.ai headless CMS integration, Lottie splash screen, in-app and rich push notifications with deep linking, Redux Toolkit state management across the app, CI/CD pipeline to TestFlight, and analytics across Firebase Crashlytics, Datadog, and CleverTap — monitoring real crashes on a live product. At Artistic Denim before that I built a Banuba-style video feature — AR effects, merging video and audio with FFmpeg, capturing with the React Native Camera SDK. Actual media pipeline work."</p>
 
     <p>"On the AI tooling side — I use Claude Code and Cursor as my primary development interface, every day. When I hit API limits I switch to Qwen2.5 Coder running locally on my M4 Pro — so I actually have a co-worker that never stops. I think about how to structure code so agents can navigate it: CLAUDE.md files, strong TypeScript types, modular files, MCP server integrations. That's genuinely how I work, not something I do occasionally."</p>
 
@@ -217,7 +217,7 @@
   <div class="qa-block">
     <div class="qa-q">Tell me more about your current role at OSN</div>
     <div class="qa-a">
-      <p>"OSN is a subscription OTT platform — the main app is myosntv, that's what I work on. React Native on iOS and Android, package-based subscription model. My work: subscription and payment flows, Firebase Crashlytics — I actually read and triaged those dashboards, not just dropped in the SDK — Firebase push notifications, Conviva for video analytics. Some SwiftUI too, I'll be straight: UI-level component work that gets bridged into the RN app, not owning a full SwiftUI module. Millions of active users across MENA, so crash stability and release quality are real concerns, not theoretical."</p>
+      <p>"OSN's main app is myosntv — package subscription OTT, React Native on iOS and Android. Let me be specific about what I actually built there: I integrated Kontent.ai as a headless CMS so content editors can push changes without an app release. I built the Lottie splash screen, in-app notifications, and rich push notifications with deep linking — so tapping a notification takes you directly to the right content inside the app. State management is Redux Toolkit throughout. For analytics and monitoring I integrated Firebase Crashlytics, Datadog, and CleverTap — I triaged real crashes from those dashboards, not just dropped in SDKs. And I set up the CI/CD pipeline for pushing builds to TestFlight automatically. That's the actual work, not just a list of technologies."</p>
     </div>
   </div>
 
@@ -365,12 +365,32 @@
     <tr>
       <td>Conviva</td>
       <td class="depth-mid">Integration</td>
-      <td>"Integrated the Conviva SDK for video analytics at OSN — session tracking, quality-of-experience metrics. Read the dashboards. Deep alerting config was the platform team's remit."</td>
+      <td>"Integrated the Conviva SDK at OSN — session tracking, quality-of-experience metrics for video playback. Read the dashboards. Deep alerting config was the platform team's remit."</td>
+    </tr>
+    <tr>
+      <td>CleverTap</td>
+      <td class="depth-mid">Real use</td>
+      <td>"Integrated CleverTap at OSN for user analytics and engagement tracking. Set up events, monitored dashboards alongside Datadog and Crashlytics."</td>
     </tr>
     <tr>
       <td>Datadog</td>
-      <td class="depth-surface">Dashboard reader</td>
-      <td>"Used Datadog dashboards to monitor crash rates and performance. SDK was integrated by the infra team — I consumed the observability, I didn't set it up."</td>
+      <td class="depth-mid">Real use</td>
+      <td>"Used Datadog at OSN to monitor crash rates and performance — real daily use, triaging issues from the dashboard, not just SDK integration."</td>
+    </tr>
+    <tr>
+      <td>CI/CD → TestFlight</td>
+      <td class="depth-mid">Built it</td>
+      <td>"Set up the CI/CD pipeline at OSN for pushing builds to TestFlight automatically. Can talk about the pipeline structure and how releases are managed."</td>
+    </tr>
+    <tr>
+      <td>Kontent.ai (headless CMS)</td>
+      <td class="depth-mid">Feature owner</td>
+      <td>"Integrated Kontent.ai into myosntv so content can be updated without app releases. This is a real advantage to mention — most mobile devs haven't touched a headless CMS."</td>
+    </tr>
+    <tr>
+      <td>Lottie / Rich Push / Deep Linking</td>
+      <td class="depth-deep">Solid</td>
+      <td>"Built Lottie splash screen, in-app notifications, and rich push notifications with deep linking at OSN. Deep linking means tapping the notification routes directly to the right screen — can explain the implementation."</td>
     </tr>
     <tr>
       <td>FFmpeg / Video pipeline (Artistic Denim)</td>
