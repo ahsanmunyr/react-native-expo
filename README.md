@@ -1,56 +1,121 @@
-# Welcome to your Expo app 👋
+# Munsit — Interview Demo App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Built for the CNTXT/Munsit interview. Demonstrates real React Native skills across audio recording, live transcription, RTL support, and real-API data fetching.
 
-## Get started
+**Stack:** Expo SDK 56 · React Navigation · Zustand · expo-av · TypeScript
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Screens
 
-2. Start the app
+### 1. Live Transcription (`src/screens/TranscriptionScreen.tsx`)
+- Word-by-word streaming simulation using `setTimeout` recursion
+- Language toggle: English ↔ Arabic with full RTL support (`writingDirection: 'rtl'`, `I18nManager`)
+- Zustand store for transcription state (`src/store/useTranscriptionStore.ts`)
+- Animated pulse on record button, `FlatList` with auto-scroll to latest word
+- Demonstrates: Zustand, RTL, stale closure fix via `useRef`, `Animated`
 
-   ```bash
-   npx expo start
-   ```
+### 2. Record & Playback (`src/screens/AudioDemoScreen.tsx`)
+- Full `expo-av` recording pipeline: permissions → AVAudioSession config → metering → stop → playback
+- Real-time amplitude bars driven by `status.metering` (dBFS normalised to 0–1)
+- Key iOS calls shown in-app as a study reference:
+  - `Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })`
+  - `rec.prepareToRecordAsync({ isMeteringEnabled: true })`
+  - `rec.setOnRecordingStatusUpdate(cb)` for live amplitude
+  - Reset audioMode after stop so playback works
+- Demonstrates: expo-av, AVAudioSession, Animated bars, cleanup on unmount
 
-In the output, you'll find options to open the app in a
+### 3. Audio Player UI (`src/screens/AudioPlayerScreen.tsx`)
+- Waveform visualiser with `Animated.parallel` loop while playing
+- Seek ±15s, playback speed buttons, bilingual track info (Arabic + English)
+- Progress bar using flex ratio — no external slider dependency
+- Demonstrates: Animated, stable refs for intervals, `Animated.CompositeAnimation`
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 4. Search & Explore (`src/screens/ExploreScreen.tsx`)
+- Real API: `dummyjson.com/products/search` with debounced search and pagination
+- `FlatList` with `onEndReached` for infinite scroll
+- Demonstrates: real API integration, pagination, controlled text input
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## Architecture
 
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/
+  App.tsx                    ← NavigationContainer, Stack.Navigator
+  screens/
+    HomeScreen.tsx           ← Menu with numbered cards
+    TranscriptionScreen.tsx  ← Live transcription + RTL
+    AudioDemoScreen.tsx      ← Record, meter, playback (expo-av)
+    AudioPlayerScreen.tsx    ← Waveform player UI
+    ExploreScreen.tsx        ← Search + pagination
+  store/
+    useTranscriptionStore.ts ← Zustand store (segments, liveText, language)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Pattern: **Feature-based layout + custom hook logic separation**, same as production myosntv app. Screen components are pure UI; all logic lives in stores or hooks.
 
-### Other setup steps
+---
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Getting Started
 
-## Learn more
+### Prerequisites
+- Node 18+
+- Xcode 16 (for iOS simulator)
+- CocoaPods
 
-To learn more about developing your project with Expo, look at the following resources:
+### Install
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npm install
+```
 
-## Join the community
+### Run on iOS simulator (first time or after installing new packages)
 
-Join our community of developers creating universal apps.
+```bash
+npx expo prebuild
+cd ios && pod install && cd ..
+npx expo run:ios
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Run on iOS simulator (after first build)
+
+```bash
+npx expo run:ios
+```
+
+> **Note:** Use `expo run:ios` — not `expo start`. This project uses native modules (`expo-av`) that require a development build, not Expo Go.
+
+### Common error: `Cannot find native module 'ExponentAV'`
+
+This means pods weren't installed with `expo-av`. Fix:
+
+```bash
+npx expo prebuild
+cd ios && pod install && cd ..
+npx expo run:ios
+```
+
+---
+
+## Interview Prep Guide
+
+Open `interview-prep.html` in a browser. Covers:
+- Personal pitch (4 beats)
+- Honest depth table for all technologies on your CV
+- Audio deep-dive (expo-av, AVAudioSession, dBFS)
+- Architecture patterns (MVVM via hooks, Service Layer, Redux Middleware)
+- JS Core, Async JS, React patterns, ES6+, TypeScript
+- Questions to ask at the end of the interview
+
+---
+
+## Key Tech Decisions
+
+| Decision | Why |
+|---|---|
+| Zustand over Redux | Minimal boilerplate, synchronous reads with `get()`, no Provider needed |
+| `useRef` for language in streaming | Avoids stale closure in `setTimeout` recursion |
+| `Animated` (not Reanimated) | No worklet complexity needed for these animations; bridge is fine |
+| `FlatList` not `FlashList` | Simple lists; FlashList's fixed-height requirement adds friction |
+| Real dummyjson API | Shows real network + pagination, not hardcoded mock data |
