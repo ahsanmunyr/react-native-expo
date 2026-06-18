@@ -1744,6 +1744,211 @@ type B = IsString&lt;number&gt;;  // 'no'
 </section>
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="architecture">
+  <h1>Your Architecture — What to Say When They Ask</h1>
+
+  <div class="box box-tip">
+    <strong>They will ask this.</strong> "How do you structure your React Native projects?" or "What architecture pattern do you follow?" — this section is your answer, based on what you actually built in myosntv.
+  </div>
+
+  <h2>The One-Line Answer</h2>
+  <div class="pitch" style="padding: 20px 28px;">
+    <p style="font-size:18px; margin:0">"I use a <strong>feature-based modular architecture with MVVM implemented through custom hooks</strong>. Each feature owns its screen, its business logic hook, its styles, its Redux slice, and its service — all in the same domain folder."</p>
+  </div>
+
+  <h2>Break It Down — Pattern by Pattern</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-diff">Your Code</span> Feature-based (Domain-Driven) folder structure</div>
+    <div class="qa-a">
+      <p>Most tutorials organise by type: <code>components/</code>, <code>screens/</code>, <code>styles/</code>. You organise by <strong>domain/feature</strong>:</p>
+<pre><code class="language-typescript">src/
+  screens/
+    dashboard/home/        ← everything for Home feature
+      HomeScreen.tsx       ← View (pure UI)
+      HomeScreen.style.ts  ← styles stay with their screen
+      hooks/useHome.ts     ← ViewModel (all business logic)
+    authentication/
+    profile/
+    quick-pay/
+  store/
+    user/user.slice.ts     ← state owned by user domain
+    bills/bills.slice.ts
+    payments/payment.slice.ts
+  services/
+    app/app.service.ts     ← API calls owned by domain
+    payment/
+    profile/
+</code></pre>
+      <p><strong>Why it's better:</strong> when you work on a feature, everything you need is in one place. No jumping between a <code>components/</code> folder, a <code>reducers/</code> folder, a <code>styles/</code> folder. Scale it to 50 features and it still works.</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-diff">Your Code</span> MVVM via Custom Hooks — the most important pattern</div>
+    <div class="qa-a">
+      <p>Classic MVVM: <strong>Model</strong> (data/state) → <strong>ViewModel</strong> (logic) → <strong>View</strong> (UI). In React with hooks:</p>
+<pre><code class="language-typescript">// VIEW — HomeScreen.tsx
+// Pure UI: renders what the hook gives it, calls what the hook exposes
+// No business logic, no API calls, no state management
+const HomeScreen = () => {
+  const { packages, isLoading, handlePackPress, handleRefresh } = useHome(); // ← ViewModel
+
+  if (isLoading) return &lt;Skeleton /&gt;;
+  return (
+    &lt;ScrollView refreshControl={&lt;RefreshControl onRefresh={handleRefresh} /&gt;}&gt;
+      {packages.map(pkg =&gt; &lt;PackageCard key={pkg.id} onPress={() =&gt; handlePackPress(pkg)} /&gt;)}
+    &lt;/ScrollView&gt;
+  );
+};
+
+// VIEWMODEL — useHome.ts (your 43KB hook)
+// All business logic lives here: data fetching, state, event handlers, side effects
+// Completely separated from UI — testable in isolation
+const useHome = () => {
+  const dispatch = useAppDispatch();
+  const { token } = useAppSelector(s => s.user);
+  const [isLoading, setLoading] = useState(true);
+
+  useEffect(() => { fetchDashboardData(); }, []);
+
+  const fetchDashboardData = async () => { /* ... */ };
+  const handlePackPress = useCallback((pack) => {
+    navigation.navigate(STACK_SCREENS.PACK_DETAIL, { pack });
+  }, []);
+
+  return { packages, isLoading, handlePackPress, handleRefresh };
+};
+
+// MODEL — Redux store + services
+// Redux slice owns the state shape
+// Service owns the API call — completely decoupled from the component
+export const packDetailService = async (id: string): Promise&lt;PackDetail&gt; => {
+  const response = await ajax.get(url.packs.detail(id));
+  return response.data;
+};
+</code></pre>
+      <p><strong>Why this matters for Munsit:</strong> they have complex screens (live transcription, audio player, subscription management). MVVM via hooks keeps those screens testable and maintainable as they grow.</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-diff">Your Code</span> Service Layer — screens never touch axios directly</div>
+    <div class="qa-a">
+<pre><code class="language-typescript">// WRONG — logic scattered in component
+const HomeScreen = () => {
+  useEffect(() => {
+    axios.get('/packs').then(res => setPacks(res.data)); // ❌ axios in component
+  }, []);
+};
+
+// YOUR PATTERN — clean separation
+// services/pack-details/pack-details.service.ts
+export const getPacksService = async (): Promise&lt;Pack[]&gt; => {
+  const response = await ajax.get(url.packs.list);
+  return response.data;
+};
+
+// hooks/useHome.ts (ViewModel calls the service)
+const fetchPacks = async () => {
+  const packs = await getPacksService(); // ✅ no axios in hook either
+  dispatch(setPacks(packs));
+};
+
+// Benefits:
+// 1. Swap axios for fetch — change one file, not 30 components
+// 2. Mock the service in tests — no need to mock axios
+// 3. Error handling in one place
+// 4. Reuse the same service call from different hooks
+</code></pre>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-diff">Your Code</span> Factory pattern — multiple axios instances</div>
+    <div class="qa-a">
+<pre><code class="language-typescript">// You have 4+ axios instances, each a factory function
+// api.ts in myosntv:
+function createAjaxInstance() {           // main API
+  return axios.create({
+    baseURL: env.BASE_URL,
+    headers: { 'ocp-apim-subscription-key': settings.MYOSN_SUBSCRIPTION_KEY },
+  });
+}
+function createAjaxGWInstance() {         // gateway API (different auth)
+  return axios.create({ baseURL: env.GW_BASE_URL, headers: { ... } });
+}
+function createAjaxKontentAi() {          // Kontent.ai CMS
+  return axios.create({
+    baseURL: `${env.KONTENT_AI_BASE_URL}/${settings.PROJECT_ID}/`,
+    headers: { Authorization: `Bearer ${settings.OSN_KONTENT_AI_API_KEY}` },
+  });
+}
+function createAjaxPF() {                 // PayFacade payment gateway
+  return axios.create({ baseURL: env.PF_BASE_URL, headers: { ... } });
+}
+
+// Why Factory: each backend has different base URLs, auth headers, and retry logic
+// Factory isolates those differences — callers just import ajax / ajaxGW / ajaxPF
+</code></pre>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-diff">Your Code</span> Custom Redux Middleware — Decorator / Interceptor pattern</div>
+    <div class="qa-a">
+<pre><code class="language-typescript">// cacheMiddleware.ts — intercepts specific Redux actions and persists to MMKV
+// This is the Interceptor pattern (like axios interceptors, but for Redux)
+
+const inclusiveCache = [...userReducerCacheActions, ...appReducerCacheActions];
+
+export const cacheMiddleware: Middleware = () => next => (action: any) => {
+  // Intercept the action BEFORE it reaches the reducer
+  if (inclusiveCache.includes(action.type)) {
+    if (action.payload !== null) {
+      storage.set(action.type, JSON.stringify(action.payload)); // persist to MMKV
+    } else {
+      storage.delete(action.type); // clear cache on null
+    }
+  }
+  next(action); // pass through to reducer
+};
+
+// Pattern name: Middleware / Chain of Responsibility
+// Each middleware wraps the next — same pattern as Express.js middleware,
+// axios interceptors, and React's context providers
+
+// Real benefit: token is auto-persisted across app restarts without
+// writing storage.set() in every component that updates the token
+</code></pre>
+    </div>
+  </div>
+
+  <h2>How to Say It In the Interview</h2>
+  <div class="qa-block">
+    <div class="qa-q">How do you architect a React Native app?</div>
+    <div class="qa-a">
+      <p>"I use feature-based modular architecture — folders organised by domain, not by file type. Inside each feature I follow MVVM: the screen component is the View and handles only UI, the custom hook is the ViewModel with all business logic and state, and the service layer plus Redux slices are the Model. Nothing touches axios directly from a screen or a hook — API calls live in service files that are independently testable and reusable."</p>
+      <p>"I also use a custom Redux middleware for caching critical state to MMKV so it persists across restarts — that's the Interceptor pattern, same concept as axios interceptors but for Redux actions."</p>
+      <p>"In myosntv that structure handles 15+ Redux slices, 4 separate axios instances for different backends including Kontent.ai, PayFacade, and the main API — and it scales without becoming a mess because each feature owns everything it needs."</p>
+    </div>
+  </div>
+
+  <h2>Pattern Names to Drop Naturally</h2>
+  <table>
+    <tr><th>What you built</th><th>Pattern name</th><th>One-line explanation</th></tr>
+    <tr><td>Feature folders (screens + store + services by domain)</td><td><strong>Feature-based / Domain-Driven</strong></td><td>Group by what changes together, not by what it is</td></tr>
+    <tr><td>useHome.ts separates logic from HomeScreen.tsx</td><td><strong>MVVM via custom hooks</strong></td><td>Hook = ViewModel, Component = View, Redux+Service = Model</td></tr>
+    <tr><td>Services layer (api calls isolated)</td><td><strong>Repository / Service Layer</strong></td><td>Screens never know how data is fetched</td></tr>
+    <tr><td>createAjaxInstance() etc.</td><td><strong>Factory pattern</strong></td><td>Function that creates configured instances</td></tr>
+    <tr><td>cacheMiddleware intercepting actions</td><td><strong>Middleware / Interceptor / Chain of Responsibility</strong></td><td>Wraps behaviour around a pipeline</td></tr>
+    <tr><td>All functional components + hooks</td><td><strong>Composition over Inheritance</strong></td><td>Build behaviour by composing small hooks, not extending classes</td></tr>
+    <tr><td>React.memo + useCallback + useMemo throughout</td><td><strong>Memoisation / Flyweight</strong></td><td>Reuse expensive results instead of recomputing</td></tr>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
 <section id="ask">
   <h1>12. Questions to Ask Them</h1>
 
