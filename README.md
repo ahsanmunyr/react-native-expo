@@ -2,7 +2,7 @@
 
 Built for the CNTXT/Munsit interview. Demonstrates real React Native skills across audio recording, live transcription, RTL support, and real-API data fetching.
 
-**Stack:** Expo SDK 56 · React Navigation · Zustand · expo-av · TypeScript
+**Stack:** Expo SDK 56 · React Navigation · Zustand · expo-audio · TypeScript
 
 ---
 
@@ -16,14 +16,11 @@ Built for the CNTXT/Munsit interview. Demonstrates real React Native skills acro
 - Demonstrates: Zustand, RTL, stale closure fix via `useRef`, `Animated`
 
 ### 2. Record & Playback (`src/screens/AudioDemoScreen.tsx`)
-- Full `expo-av` recording pipeline: permissions → AVAudioSession config → metering → stop → playback
-- Real-time amplitude bars driven by `status.metering` (dBFS normalised to 0–1)
-- Key iOS calls shown in-app as a study reference:
-  - `Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })`
-  - `rec.prepareToRecordAsync({ isMeteringEnabled: true })`
-  - `rec.setOnRecordingStatusUpdate(cb)` for live amplitude
-  - Reset audioMode after stop so playback works
-- Demonstrates: expo-av, AVAudioSession, Animated bars, cleanup on unmount
+- Full `expo-audio` recording pipeline (SDK 56 — expo-av was deprecated/broken in SDK 56)
+- `useAudioRecorder` + `useAudioRecorderState` for real-time metering (dBFS → 0–1 amplitude bars)
+- `useAudioPlayer` + `player.replace(uri)` for playback after recording
+- `setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true })` for AVAudioSession config
+- Demonstrates: expo-audio hooks, AVAudioSession, Animated bars, hook-based lifecycle
 
 ### 3. Audio Player UI (`src/screens/AudioPlayerScreen.tsx`)
 - Waveform visualiser with `Animated.parallel` loop while playing
@@ -46,7 +43,7 @@ src/
   screens/
     HomeScreen.tsx           ← Menu with numbered cards
     TranscriptionScreen.tsx  ← Live transcription + RTL
-    AudioDemoScreen.tsx      ← Record, meter, playback (expo-av)
+    AudioDemoScreen.tsx      ← Record, meter, playback (expo-audio)
     AudioPlayerScreen.tsx    ← Waveform player UI
     ExploreScreen.tsx        ← Search + pagination
   store/
@@ -84,15 +81,14 @@ npx expo run:ios
 npx expo run:ios
 ```
 
-> **Note:** Use `expo run:ios` — not `expo start`. This project uses native modules (`expo-av`) that require a development build, not Expo Go.
+> **Note:** Use `expo run:ios` — not `expo start`. This project uses native modules (`expo-audio`) that require a development build, not Expo Go.
 
-### Common error: `Cannot find native module 'ExponentAV'`
+### Common error: `Cannot find native module 'ExponentAV'` or build failure
 
-This means pods weren't installed with `expo-av`. Fix:
+Run a clean prebuild to regenerate the ios folder with all current packages:
 
 ```bash
 npx expo prebuild
-cd ios && pod install && cd ..
 npx expo run:ios
 ```
 
@@ -103,7 +99,7 @@ npx expo run:ios
 Open `interview-prep.html` in a browser. Covers:
 - Personal pitch (4 beats)
 - Honest depth table for all technologies on your CV
-- Audio deep-dive (expo-av, AVAudioSession, dBFS)
+- Audio deep-dive (expo-audio, AVAudioSession, dBFS)
 - Architecture patterns (MVVM via hooks, Service Layer, Redux Middleware)
 - JS Core, Async JS, React patterns, ES6+, TypeScript
 - Questions to ask at the end of the interview

@@ -262,7 +262,7 @@
     </tr>
     <tr>
       <td><strong>Record & Playback</strong></td>
-      <td>Real expo-av recording, amplitude metering → animated bars, playback with status callbacks</td>
+      <td>Real expo-audio recording, amplitude metering → animated bars, playback with status callbacks</td>
       <td>Audio.Recording, AVAudioSession, metering, unloadAsync</td>
     </tr>
     <tr>
@@ -338,7 +338,7 @@
       <td>WebSocket experience at OSN. Socket.IO adds reconnection, rooms, namespaces on top. SSE for one-way streaming — you built a simulation of this in the demo.</td>
     </tr>
     <tr>
-      <td>expo-av / Audio</td>
+      <td>expo-audio (SDK 56)</td>
       <td class="depth-surface">New</td>
       <td>"New to me this week — I studied it and built a working demo with recording, metering, and playback." Show AudioDemoScreen. Being honest here builds trust.</td>
     </tr>
@@ -431,81 +431,76 @@
   <div class="qa-block">
     <div class="qa-q"><span class="tag tag-hard">Hard</span> Walk me through implementing audio recording in Expo/React Native.</div>
     <div class="qa-a">
-      <p>Five steps, in order:</p>
+      <p>Using <strong>expo-audio</strong> (SDK 53+ replacement for the deprecated expo-av) — five steps:</p>
       <ol>
-        <li><strong>Request permission</strong> — <code>Audio.requestPermissionsAsync()</code></li>
-        <li><strong>Configure AVAudioSession (iOS critical)</strong> — <code>Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })</code>. Without this, recording fails on iOS or is silent.</li>
-        <li><strong>Prepare recording</strong> — <code>new Audio.Recording()</code> then <code>prepareToRecordAsync</code> with preset + <code>isMeteringEnabled: true</code></li>
-        <li><strong>Start + meter</strong> — <code>startAsync()</code>, attach <code>setOnRecordingStatusUpdate</code> to get dBFS amplitude every 100ms</li>
-        <li><strong>Stop + get URI</strong> — <code>stopAndUnloadAsync()</code> then <code>getURI()</code></li>
+        <li><strong>Request permission</strong> — <code>requestRecordingPermissionsAsync()</code></li>
+        <li><strong>Configure AVAudioSession (iOS critical)</strong> — <code>setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true })</code>. Without this, recording fails silently on iOS.</li>
+        <li><strong>Prepare + start</strong> — <code>await recorder.prepareToRecordAsync()</code> then <code>recorder.record()</code>. Must call prepare before every record.</li>
+        <li><strong>Real-time metering</strong> — <code>useAudioRecorderState(recorder, 100)</code> gives <code>state.metering</code> (dBFS) every 100ms for visualisation</li>
+        <li><strong>Stop + play</strong> — <code>await recorder.stop()</code> → <code>recorder.uri</code> has the file. Load it with <code>player.replace({ uri })</code> then <code>player.play()</code></li>
       </ol>
-      <p>Then reset audio mode for playback (<code>allowsRecordingIOS: false</code>) before loading the Sound.</p>
+      <p>Reset audio mode after stop (<code>allowsRecording: false</code>) so playback routes to the speaker, not the earpiece.</p>
     </div>
   </div>
 
-  <h3>Full Recording + Playback Code</h3>
-<pre><code class="language-typescript">import { Audio, AVPlaybackStatus } from 'expo-av';
+  <h3>Full Recording + Playback Code (expo-audio — SDK 56)</h3>
+<pre><code class="language-typescript">import {
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  RecordingPresets,
+} from 'expo-audio';
 
-// ── 1. Permissions ──────────────────────────────────────────────────────────
-const { granted } = await Audio.requestPermissionsAsync();
+// ── Hooks (top level of component) ──────────────────────────────────────────
+const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
+const recorderState = useAudioRecorderState(recorder, 100); // polls every 100ms
+const player = useAudioPlayer(null);           // start with no source
+const playerStatus = useAudioPlayerStatus(player);
+
+// ── 1. Permissions ───────────────────────────────────────────────────────────
+const { granted } = await requestRecordingPermissionsAsync();
 if (!granted) return;
 
-// ── 2. Configure iOS audio session ──────────────────────────────────────────
-await Audio.setAudioModeAsync({
-  allowsRecordingIOS: true,
-  playsInSilentModeIOS: true,       // still records on silent mode
-  staysActiveInBackground: false,
-});
+// ── 2. Configure iOS audio session ───────────────────────────────────────────
+await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
 
-// ── 3. Create and prepare recording ─────────────────────────────────────────
-const recording = new Audio.Recording();
-await recording.prepareToRecordAsync({
-  ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-  isMeteringEnabled: true,           // needed for amplitude
-});
+// ── 3. Prepare + start ───────────────────────────────────────────────────────
+await recorder.prepareToRecordAsync();   // MUST call before every record()
+recorder.record();
 
-// ── 4. Subscribe to metering (amplitude visualisation) ──────────────────────
-recording.setOnRecordingStatusUpdate((status) => {
-  if (!status.isRecording) return;
-  // metering is dBFS: -160 (silence) → 0 (peak)
-  // useful range is typically -60 → 0
-  const amplitude = Math.max(0, (status.metering! + 60) / 60); // 0–1
-  setAmplitude(amplitude);
-});
-recording.setProgressUpdateInterval(100); // ms
+// ── 4. Read amplitude from state (in a useEffect watching recorderState) ─────
+const amplitude = recorderState.metering !== undefined
+  ? Math.max(0, (recorderState.metering + 60) / 60)  // dBFS -60→0 normalised to 0→1
+  : 0;
 
-// ── 5. Start ─────────────────────────────────────────────────────────────────
-await recording.startAsync();
+// ── 5. Stop + reset audio mode ────────────────────────────────────────────────
+await recorder.stop();
+await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+// recorder.uri now has the local file path
 
-// ── 6. Stop ──────────────────────────────────────────────────────────────────
-await recording.stopAndUnloadAsync();
-const uri = recording.getURI(); // local file:// path
+// ── 6. Load into player and play ─────────────────────────────────────────────
+player.replace({ uri: recorder.uri! });  // replace() loads new source
+player.play();
 
-// ── 7. Reset audio mode for playback ────────────────────────────────────────
-await Audio.setAudioModeAsync({
-  allowsRecordingIOS: false,
-  playsInSilentModeIOS: true,
-});
+// ── 7. Watch playback status ─────────────────────────────────────────────────
+// playerStatus.currentTime, playerStatus.duration, playerStatus.playing
+// playerStatus.isLoaded — wait for this before reading duration
 
-// ── 8. Load and play ─────────────────────────────────────────────────────────
-const { sound } = await Audio.Sound.createAsync({ uri });
-
-sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-  if (!status.isLoaded) return;
-  if (status.didJustFinish) {
-    sound.unloadAsync(); // ALWAYS unload — prevents memory leaks
-  }
-});
-
-await sound.playAsync();
+// ── 8. Cleanup ────────────────────────────────────────────────────────────────
+// useAudioRecorder and useAudioPlayer clean up automatically on unmount
+// No manual unloadAsync() needed — lifecycle is managed by the hooks
 </code></pre>
 
   <div class="qa-block">
     <div class="qa-q"><span class="tag tag-hard">Hard</span> What is AVAudioSession and why does it matter?</div>
     <div class="qa-a">
       <p>AVAudioSession is iOS's audio routing and categorisation system. It tells the OS what your app is doing with audio so it can make decisions about interruptions, routing (speaker vs earpiece vs Bluetooth), and background behaviour.</p>
-      <p>If you don't set <code>allowsRecordingIOS: true</code> before recording, iOS won't give you mic access even if permission is granted. If you don't set <code>playsInSilentModeIOS: true</code>, recordings fail on a device in silent mode. After recording you must reset to <code>allowsRecordingIOS: false</code> otherwise playback goes through the earpiece instead of the speaker.</p>
-      <p>On Android this is handled differently (AudioManager focus) but expo-av wraps both platforms.</p>
+      <p>In expo-audio you configure it with <code>setAudioModeAsync()</code>. If you don't set <code>allowsRecording: true</code> before recording, iOS won't route mic input to your app even if permission is granted. If you don't set <code>playsInSilentMode: true</code>, audio fails on a device in silent mode. After recording you must reset to <code>allowsRecording: false</code> otherwise playback routes through the earpiece instead of the speaker.</p>
+      <p>On Android the equivalent is AudioManager focus — expo-audio wraps both platforms with the same API.</p>
+      <p><strong>expo-av vs expo-audio:</strong> expo-av was deprecated in SDK 53. expo-audio has a hook-based API (<code>useAudioRecorder</code>, <code>useAudioPlayer</code>) and handles lifecycle automatically — no manual <code>unloadAsync()</code> on unmount. expo-av's <code>EXEventEmitter.h</code> header was removed from ExpoModulesCore in SDK 56, so expo-av won't compile in SDK 56.</p>
     </div>
   </div>
 

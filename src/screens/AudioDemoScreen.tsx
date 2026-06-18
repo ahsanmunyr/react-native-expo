@@ -1,127 +1,89 @@
-/**
- * INTERVIEW DEMO — Audio Recording & Playback with expo-av
- *
- * Covers what CNTXT will almost certainly ask about:
- *  1. Permissions (iOS + Android)
- *  2. AVAudioSession configuration (iOS — critical)
- *  3. Recording with real-time metering → amplitude bars
- *  4. Stop + playback of the recorded file
- *  5. Cleanup (unload sound, reset)
- */
-
-import { Audio, AVPlaybackStatus } from 'expo-av';
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type RecordingState = 'idle' | 'recording' | 'stopped';
-type PlaybackState = 'idle' | 'playing' | 'paused';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const BAR_COUNT = 30;
-const METER_UPDATE_MS = 100;
-
-// ─── Component ────────────────────────────────────────────────────────────────
+const METER_INTERVAL_MS = 100;
 
 export default function AudioDemoScreen() {
   const [permission, setPermission] = useState<boolean | null>(null);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [playbackState, setPlaybackState] = useState<PlaybackState>('idle');
-  const [recordingUri, setRecordingUri] = useState<string | null>(null);
-  const [elapsedSec, setElapsedSec] = useState(0);
-  const [amplitude, setAmplitude] = useState(0); // 0–1 normalised from dBFS
+  const [playbackState, setPlaybackState] = useState<'idle' | 'playing' | 'paused'>('idle');
 
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // expo-audio hooks (SDK 56 — replaces expo-av)
+  const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
+  const recorderState = useAudioRecorderState(recorder, METER_INTERVAL_MS);
+  const player = useAudioPlayer(null); // starts with no source; replace() after recording
+  const playerStatus = useAudioPlayerStatus(player);
 
   // Animated bars for the metering visualiser
   const barAnims = useRef(
     Array.from({ length: BAR_COUNT }, () => new Animated.Value(0.05))
   ).current;
 
-  // ── Permissions ─────────────────────────────────────────────────────────────
+  // ── Permissions ────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    (async () => {
-      const { granted } = await Audio.requestPermissionsAsync();
-      setPermission(granted);
-    })();
+    requestRecordingPermissionsAsync().then(({ granted }) => setPermission(granted));
   }, []);
 
-  // ── Amplitude → bar animations ──────────────────────────────────────────────
+  // ── Metering → bar animations ──────────────────────────────────────────────
+
+  const amplitude =
+    recorderState.metering !== undefined
+      ? Math.max(0, (recorderState.metering + 60) / 60)
+      : 0;
 
   useEffect(() => {
-    barAnims.forEach((anim, i) => {
-      const randomVariance = 0.3 + Math.random() * 0.7;
+    barAnims.forEach((anim) => {
+      const variance = 0.3 + Math.random() * 0.7;
       Animated.timing(anim, {
-        toValue: recordingState === 'recording' ? amplitude * randomVariance : 0.05,
-        duration: METER_UPDATE_MS,
+        toValue: recordingState === 'recording' ? amplitude * variance : 0.05,
+        duration: METER_INTERVAL_MS,
         useNativeDriver: false,
       }).start();
     });
   }, [amplitude, recordingState]);
 
-  // ── Cleanup on unmount ───────────────────────────────────────────────────────
+  // ── Load recorded file into player after stop ──────────────────────────────
 
   useEffect(() => {
-    return () => {
-      stopTimer();
-      recordingRef.current?.stopAndUnloadAsync().catch(() => {});
-      soundRef.current?.unloadAsync().catch(() => {});
-    };
-  }, []);
+    if (recordingState === 'stopped' && recorder.uri) {
+      player.replace({ uri: recorder.uri });
+    }
+  }, [recordingState]);
 
-  // ── Timer helpers ────────────────────────────────────────────────────────────
+  // ── Track playback completion ──────────────────────────────────────────────
 
-  const startTimer = () => {
-    setElapsedSec(0);
-    timerRef.current = setInterval(() => setElapsedSec((s) => s + 1), 1000);
-  };
+  useEffect(() => {
+    if (
+      playerStatus.isLoaded &&
+      playerStatus.currentTime > 0 &&
+      playerStatus.currentTime >= playerStatus.duration
+    ) {
+      setPlaybackState('idle');
+    }
+  }, [playerStatus.currentTime, playerStatus.duration]);
 
-  const stopTimer = () => {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-  };
-
-  // ── Recording ────────────────────────────────────────────────────────────────
+  // ── Recording ──────────────────────────────────────────────────────────────
 
   const startRecording = async () => {
     if (!permission) return;
-
     try {
-      // CRITICAL on iOS: configure AVAudioSession before recording
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,     // record even when phone is on silent
-        staysActiveInBackground: false,
-      });
-
-      const rec = new Audio.Recording();
-
-      await rec.prepareToRecordAsync({
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        isMeteringEnabled: true,          // needed for amplitude data
-      });
-
-      // Real-time metering callback — fires every ~100ms
-      rec.setOnRecordingStatusUpdate((status) => {
-        if (!status.isRecording) return;
-        if (status.metering !== undefined) {
-          // metering is dBFS: -160 (silence) → 0 (max)
-          const normalised = Math.max(0, (status.metering + 60) / 60); // useful range: -60→0
-          setAmplitude(normalised);
-        }
-      });
-
-      rec.setProgressUpdateInterval(METER_UPDATE_MS);
-
-      await rec.startAsync();
-      recordingRef.current = rec;
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
       setRecordingState('recording');
-      setRecordingUri(null);
-      startTimer();
     } catch (err) {
       console.error('startRecording error:', err);
     }
@@ -129,87 +91,40 @@ export default function AudioDemoScreen() {
 
   const stopRecording = async () => {
     try {
-      stopTimer();
-      const rec = recordingRef.current;
-      if (!rec) return;
-
-      await rec.stopAndUnloadAsync();
-      const uri = rec.getURI();
-      recordingRef.current = null;
-
-      // Restore audio session for playback after recording
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-      });
-
-      setRecordingUri(uri ?? null);
+      await recorder.stop();
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
       setRecordingState('stopped');
-      setAmplitude(0);
     } catch (err) {
       console.error('stopRecording error:', err);
     }
   };
 
-  // ── Playback ─────────────────────────────────────────────────────────────────
+  // ── Playback ───────────────────────────────────────────────────────────────
 
-  const startPlayback = async () => {
-    if (!recordingUri) return;
-    try {
-      // Unload previous sound if any
-      await soundRef.current?.unloadAsync();
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: recordingUri },
-        { shouldPlay: true }
-      );
-      soundRef.current = sound;
-      setPlaybackState('playing');
-
-      sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-        if (!status.isLoaded) return;
-        if (status.didJustFinish) {
-          setPlaybackState('idle');
-          sound.unloadAsync();
-        }
-      });
-    } catch (err) {
-      console.error('playback error:', err);
-    }
-  };
-
-  const togglePlayback = async () => {
-    const sound = soundRef.current;
-    if (!sound) { await startPlayback(); return; }
-
-    const status = await sound.getStatusAsync();
-    if (!status.isLoaded) { await startPlayback(); return; }
-
-    if (status.isPlaying) {
-      await sound.pauseAsync();
+  const togglePlayback = () => {
+    if (player.playing) {
+      player.pause();
       setPlaybackState('paused');
     } else {
-      await sound.playAsync();
+      player.play();
       setPlaybackState('playing');
     }
   };
 
-  const reset = async () => {
-    stopTimer();
-    await soundRef.current?.unloadAsync();
-    soundRef.current = null;
+  const reset = () => {
+    player.pause();
     setRecordingState('idle');
     setPlaybackState('idle');
-    setRecordingUri(null);
-    setElapsedSec(0);
-    setAmplitude(0);
   };
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-  const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  const formatTime = (s: number) =>
+    `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  const elapsedSec = Math.floor(recorderState.durationMillis / 1000);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   if (permission === false) {
     return (
@@ -222,10 +137,9 @@ export default function AudioDemoScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* ── Section Label ─────────────────────────────────────── */}
-      <Text style={styles.sectionLabel}>expo-av · Recording + Playback</Text>
+      <Text style={styles.sectionLabel}>expo-audio · Recording + Playback</Text>
 
-      {/* ── Amplitude Visualiser ──────────────────────────────── */}
+      {/* Amplitude Bars */}
       <View style={styles.meterContainer}>
         {barAnims.map((anim, i) => (
           <Animated.View
@@ -241,17 +155,21 @@ export default function AudioDemoScreen() {
         ))}
       </View>
 
-      {/* ── Timer ────────────────────────────────────────────── */}
-      <Text style={styles.timer}>{formatTime(elapsedSec)}</Text>
+      {/* Timer */}
+      <Text style={styles.timer}>
+        {recordingState === 'stopped'
+          ? formatTime(playerStatus.currentTime)
+          : formatTime(elapsedSec)}
+      </Text>
       <Text style={styles.timerSub}>
         {recordingState === 'recording'
           ? 'Recording…'
           : recordingState === 'stopped'
-          ? 'Ready to play'
+          ? `Duration: ${formatTime(playerStatus.duration)}`
           : 'Press record to start'}
       </Text>
 
-      {/* ── Record Button ─────────────────────────────────────── */}
+      {/* Record Button */}
       <Pressable
         style={[styles.recordBtn, recordingState === 'recording' && styles.recordBtnActive]}
         onPress={recordingState === 'recording' ? stopRecording : startRecording}
@@ -259,16 +177,18 @@ export default function AudioDemoScreen() {
         <View style={[styles.recordCore, recordingState === 'recording' && styles.recordCoreActive]} />
       </Pressable>
 
-      {/* ── Playback Row (shown after recording) ─────────────── */}
+      {/* Playback Row */}
       {recordingState === 'stopped' && (
         <View style={styles.playbackRow}>
           <Pressable style={styles.playBtn} onPress={togglePlayback}>
-            <Text style={styles.playIcon}>
-              {playbackState === 'playing' ? '⏸' : '▶'}
-            </Text>
+            <Text style={styles.playIcon}>{playbackState === 'playing' ? '⏸' : '▶'}</Text>
           </Pressable>
           <Text style={styles.playLabel}>
-            {playbackState === 'playing' ? 'Playing…' : playbackState === 'paused' ? 'Paused' : 'Play recording'}
+            {playbackState === 'playing'
+              ? 'Playing…'
+              : playbackState === 'paused'
+              ? 'Paused'
+              : 'Play recording'}
           </Text>
           <Pressable style={styles.resetBtn} onPress={reset}>
             <Text style={styles.resetLabel}>Reset</Text>
@@ -276,18 +196,20 @@ export default function AudioDemoScreen() {
         </View>
       )}
 
-      {/* ── Code Notes (interview reference) ─────────────────── */}
+      {/* API Reference — useful during interview */}
       <View style={styles.codeNotes}>
-        <Text style={styles.codeNotesTitle}>Key API calls (study these)</Text>
+        <Text style={styles.codeNotesTitle}>expo-audio API (SDK 56)</Text>
         {[
-          'Audio.requestPermissionsAsync()',
-          'Audio.setAudioModeAsync({ allowsRecordingIOS: true })',
-          'rec.prepareToRecordAsync({ isMeteringEnabled: true })',
-          'rec.setOnRecordingStatusUpdate(cb)  ← amplitude here',
-          'rec.stopAndUnloadAsync() → rec.getURI()',
-          'Audio.Sound.createAsync({ uri })',
-          'sound.setOnPlaybackStatusUpdate(cb)',
-          'sound.unloadAsync()  ← always unload!',
+          'requestRecordingPermissionsAsync()',
+          'setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true })',
+          'recorder.prepareToRecordAsync()  ← before every record()',
+          'recorder.record()               ← starts recording',
+          'await recorder.stop()           ← recorder.uri ready after',
+          'useAudioRecorderState(rec, ms)  ← state.metering for amplitude',
+          'useAudioPlayer(null)            ← no initial source',
+          'player.replace({ uri })         ← load recorded file',
+          'player.play() / player.pause()',
+          'useAudioPlayerStatus(player)    ← currentTime, duration',
         ].map((line, i) => (
           <Text key={i} style={styles.codeLine}>
             {line}
@@ -298,8 +220,6 @@ export default function AudioDemoScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   container: { padding: 24, alignItems: 'center', gap: 20, paddingBottom: 60 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
@@ -308,12 +228,7 @@ const styles = StyleSheet.create({
 
   sectionLabel: { fontSize: 13, color: '#999', letterSpacing: 1, textTransform: 'uppercase' },
 
-  meterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 72,
-    gap: 3,
-  },
+  meterContainer: { flexDirection: 'row', alignItems: 'center', height: 72, gap: 3 },
   bar: { width: 6, borderRadius: 3 },
 
   timer: { fontSize: 48, fontWeight: '200', color: '#111', fontVariant: ['tabular-nums'] },
@@ -362,6 +277,12 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 8,
   },
-  codeNotesTitle: { fontSize: 12, color: '#7a8ba8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  codeLine: { fontSize: 13, color: '#a8d8ff', fontFamily: 'monospace', lineHeight: 22 },
+  codeNotesTitle: {
+    fontSize: 12,
+    color: '#7a8ba8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  codeLine: { fontSize: 12, color: '#a8d8ff', fontFamily: 'monospace', lineHeight: 22 },
 });
