@@ -1,9 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import ReactQueryExample from "./screens/ReactQueryExample";
-import TestingScreen from "./screens/TestingScreen";
 import ZustandExample from "./screens/ZustandExample";
 
 export type RootStackParamList = {
@@ -29,11 +28,11 @@ export default function App() {
             headerTitleStyle: { fontWeight: "600" },
           }}
         >
-          <Stack.Screen
+          {/* <Stack.Screen
             name="Testing"
             component={TestingScreen}
             options={{ title: "Testing" }}
-          />
+          /> */}
           <Stack.Screen
             name="ReactQueryExample"
             component={ReactQueryExample}
