@@ -193,6 +193,11 @@
     <li><a href="#es6">ES6+ Cheatsheet</a></li>
     <li><a href="#typescript">TypeScript — Generics, Utility Types, Patterns</a></li>
     <li><a href="#ask">Questions to Ask Them</a></li>
+    <li><a href="#round1-debrief">Round 1 Debrief — Missed Answers ⚠️</a></li>
+    <li><a href="#bug-finding">Bug Finding Exercises</a></li>
+    <li><a href="#more-questions">More Questions Like Round 1</a></li>
+    <li><a href="#scalability">Round 2 Prep — Scalability</a></li>
+    <li><a href="#security">Round 2 Prep — Security</a></li>
   </ol>
 </div>
 
@@ -1974,6 +1979,774 @@ export const cacheMiddleware: Middleware = () => next => (action: any) => {
       <li>"What would success look like for this role in the first 90 days?"</li>
       <li>"Is there a specific feature or area of the app you're hoping someone new can own quickly?"</li>
     </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="round1-debrief">
+  <h1>13. Round 1 Debrief — Missed Answers (Study These)</h1>
+  <p>These are the questions from your actual interview where you didn't have a complete answer. Know them cold for Round 2.</p>
+
+  <!-- WHY RENDERING HAPPENS -->
+  <h2>Why Does React Re-Render?</h2>
+  <div class="box box-red">
+    <strong>You missed this.</strong> This is a fundamental React question — interviewers use it to check if you understand React's core mental model.
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> Why does rendering happen in React? What triggers a re-render?</div>
+    <div class="qa-a">
+      <p><strong>React re-renders a component when one of these 4 things changes:</strong></p>
+      <ol>
+        <li><strong>State changes</strong> — <code>setState</code> / <code>useState</code> setter is called</li>
+        <li><strong>Props change</strong> — parent passes a new value down</li>
+        <li><strong>Context changes</strong> — any context the component subscribes to updates</li>
+        <li><strong>Parent re-renders</strong> — by default, when a parent re-renders, all children re-render too (even if their props didn't change)</li>
+      </ol>
+      <p>React uses a process called <strong>Reconciliation</strong>: it builds a Virtual DOM tree, diffs it against the previous tree, and only applies the actual changes to the real DOM/native views.</p>
+      <p><strong>How to prevent unnecessary re-renders:</strong> <code>React.memo</code> wraps a component so it only re-renders if props actually changed. <code>useMemo</code> memoizes an expensive computed value. <code>useCallback</code> memoizes a function reference so it doesn't cause child re-renders.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// 1. State change → re-render
+const Counter = () => {
+  const [count, setCount] = useState(0); // changing this triggers re-render
+  return &lt;Button onPress={() => setCount(c => c + 1)} title={String(count)} /&gt;;
+};
+
+// 2. Parent re-render → child re-renders (even with same props)
+const Parent = () => {
+  const [tick, setTick] = useState(0);
+  return (
+    &lt;&gt;
+      &lt;Button onPress={() => setTick(t => t + 1)} title="tick" /&gt;
+      &lt;Child name="Ahsan" /&gt; {/* re-renders every tick even though name didn't change */}
+    &lt;/&gt;
+  );
+};
+
+// 3. React.memo prevents the unnecessary re-render above
+const Child = React.memo(({ name }: { name: string }) => {
+  console.log('rendered'); // now only logs when name actually changes
+  return &lt;Text&gt;{name}&lt;/Text&gt;;
+});
+
+// 4. useCallback — stable function reference, won't break React.memo
+const Parent2 = () => {
+  const [tick, setTick] = useState(0);
+  const handlePress = useCallback(() => console.log('pressed'), []); // stable ref
+  return &lt;Child onPress={handlePress} /&gt;;
+};</code></pre>
+
+  <div class="box box-tip">
+    <strong>One-line answer for the interview:</strong> "React re-renders when state changes, props change, context changes, or a parent re-renders. React.memo, useMemo, and useCallback are the tools to optimize that."
+  </div>
+
+  <!-- ANIMATED VS REANIMATED INTERNALS -->
+  <h2>Animated vs Reanimated — How They Actually Work</h2>
+  <div class="box box-warn">
+    <strong>You got the surface answer right</strong> (Reanimated = native, Animated = JS thread). They asked the follow-up: <em>how</em> do they work? This is the deep answer.
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> How does React Native's Animated API work internally? And how is Reanimated different?</div>
+    <div class="qa-a">
+      <p><strong>Animated (old):</strong> Animated values live on the JS thread. Every frame, JS sends updated values across the <strong>JS Bridge</strong> to the native side. This bridge is asynchronous and serialised — if JS is busy (e.g. heavy render), frames get dropped. That's why complex Animated animations jank under load.</p>
+      <p><strong>Reanimated 2/3:</strong> Uses <strong>Worklets</strong> — small JS functions that are serialised and run on the <strong>UI Thread</strong> via JSI (JavaScript Interface). JSI is a direct C++ binding — no bridge, no serialisation, synchronous access to native host objects. The animation logic runs at 60/120fps on the UI thread, completely independent of what JS is doing.</p>
+      <p><strong>useSharedValue</strong> holds the animated value on the UI thread. <strong>useAnimatedStyle</strong> creates a worklet that computes styles on the UI thread. <strong>runOnUI()</strong> dispatches code to the UI thread. <strong>runOnJS()</strong> calls back to the JS thread.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// ─── OLD: React Native Animated ───────────────────────────────────────
+// Value lives on JS thread, bridge sends updates each frame
+import { Animated } from 'react-native';
+
+const fadeAnim = useRef(new Animated.Value(0)).current;
+Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+// useNativeDriver:true offloads to native but only for transform/opacity
+// Still initiated from JS, still crosses the bridge once
+
+// ─── NEW: Reanimated 3 ────────────────────────────────────────────────
+// Value lives on UI thread — no bridge, no jank
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+
+const opacity = useSharedValue(0); // lives on UI thread
+
+const animatedStyle = useAnimatedStyle(() => {
+  // This function IS a worklet — runs on UI thread at 60fps
+  return { opacity: opacity.value };
+});
+
+const startAnimation = () => {
+  opacity.value = withTiming(1, { duration: 300 }); // stays on UI thread
+};
+
+// To call a JS function from a worklet (e.g. setState):
+const onAnimationEnd = () => setDone(true); // JS thread function
+const animStyle2 = useAnimatedStyle(() => {
+  if (opacity.value === 1) runOnJS(onAnimationEnd)(); // safely crosses back
+  return { opacity: opacity.value };
+});</code></pre>
+
+  <!-- useTransition -->
+  <h2>useTransition — The Hook You Couldn't Name</h2>
+  <div class="box box-red">
+    <strong>You said "Transition hook" but couldn't explain it.</strong> It came up because it's in your demo app. Know this cold.
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> What is useTransition? When do you use it?</div>
+    <div class="qa-a">
+      <p><code>useTransition</code> marks a state update as <strong>non-urgent</strong>. React can interrupt it to handle more urgent updates (like user input) first. It's part of React 18's Concurrent Mode.</p>
+      <p>Use it when you have a state update that triggers a slow render (e.g. filtering a huge list, navigating to a heavy screen) and you don't want it to block the UI.</p>
+      <p><code>isPending</code> is <code>true</code> while the transition is processing — use it to show a loading indicator.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">import { useState, useTransition } from 'react';
+import { TextInput, FlatList, ActivityIndicator, Text } from 'react-native';
+
+const ITEMS = Array.from({ length: 10_000 }, (_, i) => `Item ${i}`);
+
+const SearchScreen = () => {
+  const [query, setQuery] = useState('');
+  const [filtered, setFiltered] = useState(ITEMS);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSearch = (text: string) => {
+    setQuery(text); // urgent — updates input immediately
+
+    startTransition(() => {
+      // non-urgent — React can defer this if something more urgent comes in
+      setFiltered(ITEMS.filter(item => item.toLowerCase().includes(text.toLowerCase())));
+    });
+  };
+
+  return (
+    &lt;&gt;
+      &lt;TextInput value={query} onChangeText={handleSearch} placeholder="Search..." /&gt;
+      {isPending &amp;&amp; &lt;ActivityIndicator /&gt;}
+      &lt;FlatList data={filtered} renderItem={({ item }) =&gt; &lt;Text&gt;{item}&lt;/Text&gt;} /&gt;
+    &lt;/&gt;
+  );
+};</code></pre>
+
+  <div class="box box-navy">
+    <strong>useTransition vs useDeferredValue:</strong> <code>useTransition</code> wraps the <em>setter call</em> — you control what's deferred. <code>useDeferredValue</code> wraps the <em>value</em> — React auto-defers updates to it. Use <code>useTransition</code> when you own the state. Use <code>useDeferredValue</code> when you receive a prop you can't control.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="bug-finding">
+  <h1>14. Bug Finding Exercises</h1>
+  <p>These are the type of code challenges they gave you. Find the bugs before reading the answer.</p>
+  <div class="box box-warn">
+    <strong>Interview tip:</strong> Read the code slowly, top-to-bottom. Check: memory leaks (setInterval/setTimeout not cleared), missing dependencies in useEffect, stale closures, missing cleanup in async calls.
+  </div>
+
+  <!-- BUG 1 -->
+  <h2>Exercise 1 — Timer Screen (like your actual interview)</h2>
+  <p>Find all bugs in this code:</p>
+  <pre><code class="language-typescript">import React, { useState, useEffect } from 'react';
+import { View, Text, Button } from 'react-native';
+
+const TimerScreen = () => {
+  const [seconds, setSeconds] = useState(0);
+  const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    if (running) {
+      const interval = setInterval(() => {
+        setSeconds(seconds + 1); // Bug 1
+      }, 1000);
+    }
+  }, [running]); // Bug 2
+
+  const reset = () => {
+    setRunning(false);
+    setSeconds(0);
+  };
+
+  return (
+    &lt;View&gt;
+      &lt;Text&gt;{seconds}s&lt;/Text&gt;
+      &lt;Button title={running ? 'Stop' : 'Start'} onPress={() =&gt; setRunning(r =&gt; !r)} /&gt;
+      &lt;Button title="Reset" onPress={reset} /&gt;
+    &lt;/View&gt;
+  );
+};</code></pre>
+
+  <div class="qa-block">
+    <div class="qa-q">Answer — Bugs Found</div>
+    <div class="qa-a">
+      <p><strong>Bug 1 — Stale closure:</strong> <code>setSeconds(seconds + 1)</code> captures the value of <code>seconds</code> at the time the effect ran. After the first tick it will always set <code>1</code>, not increment. Fix: use the functional update form <code>setSeconds(s => s + 1)</code>.</p>
+      <p><strong>Bug 2 — Memory leak (the one you found!):</strong> <code>setInterval</code> is started but never cleared. When <code>running</code> becomes <code>false</code> or the component unmounts, the interval keeps firing. Fix: return a cleanup function from <code>useEffect</code>.</p>
+      <p><strong>Bug 3 — Missing dependency:</strong> <code>seconds</code> is used inside the effect (Bug 1 version) but not in the dep array, causing ESLint exhaustive-deps warning and the stale closure problem above.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// ✅ Fixed version
+useEffect(() => {
+  if (!running) return; // early exit if not running
+
+  const interval = setInterval(() => {
+    setSeconds(s => s + 1); // functional update — no stale closure
+  }, 1000);
+
+  return () => clearInterval(interval); // ✅ cleanup — this is what you found!
+}, [running]); // running is the only dep we actually need now</code></pre>
+
+  <!-- BUG 2 -->
+  <h2>Exercise 2 — Fetch on Mount</h2>
+  <p>Find all bugs:</p>
+  <pre><code class="language-typescript">const UserProfile = ({ userId }: { userId: string }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`https://api.example.com/users/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        setUser(data);
+        setLoading(false);
+      });
+  }, []); // Bug 1
+
+  const getDisplayName = () => {
+    return user.firstName + ' ' + user.lastName; // Bug 2
+  };
+
+  return (
+    &lt;View&gt;
+      {loading &amp;&amp; &lt;ActivityIndicator /&gt;}
+      &lt;Text&gt;{getDisplayName()}&lt;/Text&gt; {/* Bug 3 */}
+    &lt;/View&gt;
+  );
+};</code></pre>
+
+  <div class="qa-block">
+    <div class="qa-q">Answer — Bugs Found</div>
+    <div class="qa-a">
+      <p><strong>Bug 1 — Stale userId:</strong> Empty dep array <code>[]</code> means the effect only runs once with the initial <code>userId</code>. If the parent passes a different <code>userId</code> later, the component won't refetch. Fix: add <code>userId</code> to the dep array.</p>
+      <p><strong>Bug 2 — Null crash:</strong> <code>user</code> starts as <code>null</code>. Calling <code>user.firstName</code> crashes immediately on first render before fetch completes. Fix: optional chaining <code>user?.firstName</code> or guard with early return.</p>
+      <p><strong>Bug 3 — Race condition / memory leak:</strong> If the component unmounts before fetch completes, <code>setUser</code> and <code>setLoading</code> are called on an unmounted component. Fix: use an <code>isMounted</code> flag or <code>AbortController</code>.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// ✅ Fixed version
+useEffect(() => {
+  const controller = new AbortController(); // ✅ cancel on unmount
+  setLoading(true);
+
+  fetch(`https://api.example.com/users/${userId}`, { signal: controller.signal })
+    .then(res => res.json())
+    .then(data => {
+      setUser(data);
+      setLoading(false);
+    })
+    .catch(err => {
+      if (err.name !== 'AbortError') setLoading(false); // ignore abort errors
+    });
+
+  return () => controller.abort(); // ✅ cleanup
+}, [userId]); // ✅ userId in deps
+
+// ✅ Safe render
+const getDisplayName = () => {
+  if (!user) return 'Loading...';
+  return `${user.firstName} ${user.lastName}`;
+};</code></pre>
+
+  <!-- BUG 3 -->
+  <h2>Exercise 3 — FlatList Performance Bug</h2>
+  <pre><code class="language-typescript">const MessageList = ({ messages }: { messages: Message[] }) => {
+  return (
+    &lt;FlatList
+      data={messages}
+      renderItem={({ item }) =&gt; ( // Bug 1
+        &lt;View style={{ padding: 16, backgroundColor: getColor(item.type) }}&gt;
+          &lt;Text&gt;{item.text}&lt;/Text&gt;
+        &lt;/View&gt;
+      )}
+      style={{ flex: 1 }}
+      // Bug 2: missing
+      // Bug 3: missing
+    /&gt;
+  );
+};
+
+const getColor = (type: string) => { // Bug 4
+  if (type === 'error') return '#ff0000';
+  if (type === 'success') return '#00ff00';
+  return '#ffffff';
+};</code></pre>
+
+  <div class="qa-block">
+    <div class="qa-q">Answer — Performance Bugs Found</div>
+    <div class="qa-a">
+      <p><strong>Bug 1 — Inline renderItem:</strong> Arrow function defined inline is recreated every render. FlatList can't memoize it. Fix: define <code>renderItem</code> outside the component or wrap in <code>useCallback</code>.</p>
+      <p><strong>Bug 2 — Missing keyExtractor:</strong> Without <code>keyExtractor</code>, FlatList uses array index as key, causing incorrect re-renders when list order changes. Fix: <code>keyExtractor={item => item.id}</code>.</p>
+      <p><strong>Bug 3 — Missing getItemLayout (if fixed height):</strong> Without this, FlatList can't skip measuring items and scrollToIndex won't work correctly. Fix: <code>getItemLayout={(_, index) => ({ length: 60, offset: 60 * index, index })}</code>.</p>
+      <p><strong>Bug 4 — getColor recreated every render:</strong> Should be a constant map outside the component. Not a crash bug but unnecessary computation.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// ✅ Fixed version
+const TYPE_COLORS: Record&lt;string, string&gt; = { // outside component
+  error: '#ff0000',
+  success: '#00ff00',
+};
+
+const MessageList = ({ messages }: { messages: Message[] }) => {
+  const renderItem = useCallback(({ item }: { item: Message }) =&gt; ( // ✅ stable ref
+    &lt;View style={{ padding: 16, backgroundColor: TYPE_COLORS[item.type] ?? '#ffffff' }}&gt;
+      &lt;Text&gt;{item.text}&lt;/Text&gt;
+    &lt;/View&gt;
+  ), []); // no deps — TYPE_COLORS is stable
+
+  return (
+    &lt;FlatList
+      data={messages}
+      renderItem={renderItem}
+      keyExtractor={item =&gt; item.id}           // ✅
+      getItemLayout={(_, i) =&gt; ({ length: 60, offset: 60 * i, index: i })} // ✅
+      removeClippedSubviews={true}              // ✅ unmount off-screen
+      maxToRenderPerBatch={10}                  // ✅ render in chunks
+      style={{ flex: 1 }}
+    /&gt;
+  );
+};</code></pre>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="more-questions">
+  <h1>15. More Questions Like Round 1</h1>
+  <p>Expect these in Round 2 or a follow-up technical screen. All are standard RN senior-level questions.</p>
+
+  <h2>React Native Core</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> What is the React Native Bridge and what problems does the New Architecture solve?</div>
+    <div class="qa-a">
+      <p><strong>Old Architecture:</strong> JS thread and native thread communicated via an <strong>async bridge</strong>. Data was serialised to JSON, sent across, deserialised. This was the bottleneck: async means you can't call native synchronously, JSON serialisation is expensive, and large payloads caused UI jank.</p>
+      <p><strong>New Architecture (JSI + Fabric + TurboModules):</strong></p>
+      <ul>
+        <li><strong>JSI (JavaScript Interface)</strong> — C++ layer that lets JS hold references to native objects directly. No serialisation, synchronous calls possible.</li>
+        <li><strong>Fabric</strong> — new rendering system. Shadow tree is built in C++ shared between JS and native. Layout runs on multiple threads in parallel.</li>
+        <li><strong>TurboModules</strong> — native modules loaded lazily (on first use), not all at startup. Faster boot time.</li>
+        <li><strong>Codegen</strong> — generates typed C++ interfaces from your JS types, enforcing type safety at the native boundary.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> What is the difference between controlled and uncontrolled components?</div>
+    <div class="qa-a">
+      <p><strong>Controlled:</strong> React state is the single source of truth. The input value comes from state and every change goes through <code>onChangeText → setState</code>. You have full control — easy to validate, format, or sync.</p>
+      <p><strong>Uncontrolled:</strong> The input manages its own internal state. You read the value when you need it (via <code>ref</code>). Less code, but harder to validate in real time.</p>
+      <p>In React Native almost all form inputs should be controlled. Use uncontrolled only for simple search bars where real-time validation isn't needed.</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> How does React Navigation work? What is the difference between Stack, Tab, and Drawer navigators?</div>
+    <div class="qa-a">
+      <p>React Navigation maintains a <strong>navigation state tree</strong>. Each navigator manages a stack/set of routes. When you navigate, it pushes/pops/replaces routes in that tree and re-renders the active screen.</p>
+      <ul>
+        <li><strong>Stack Navigator:</strong> screens stack on top of each other. Back gesture/button pops the stack. Each screen is mounted when navigated to, unmounted when popped (unless keepPreviousScreensMounted).</li>
+        <li><strong>Tab Navigator:</strong> all tab screens are mounted at once (or lazily). Switching tabs just changes which one is visible. State is preserved across switches.</li>
+        <li><strong>Drawer Navigator:</strong> slides in from the side. Similar to tabs in that screens can be pre-mounted.</li>
+      </ul>
+      <p>For deep linking, React Navigation maps URL patterns to routes in a <code>linking</code> config object.</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> Explain Redux Toolkit's data flow. What is a slice?</div>
+    <div class="qa-a">
+      <p>RTK data flow: <strong>UI dispatches action → reducer updates store → components re-render with new state</strong>.</p>
+      <p>A <strong>slice</strong> is a collection of Redux state, actions, and reducers for one feature — defined with <code>createSlice</code>. RTK uses Immer internally so you write "mutating" code in reducers but it produces immutable updates.</p>
+      <p><strong>createAsyncThunk</strong> handles async operations (API calls). It dispatches <code>pending/fulfilled/rejected</code> action types automatically. You handle these in <code>extraReducers</code>.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// Slice example — the pattern you use at OSN
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+
+interface AuthState { user: User | null; loading: boolean; error: string | null; }
+
+export const loginThunk = createAsyncThunk('auth/login',
+  async (creds: { email: string; password: string }) => {
+    const res = await authService.login(creds);
+    return res.data; // becomes action.payload in fulfilled
+  }
+);
+
+const authSlice = createSlice({
+  name: 'auth',
+  initialState: { user: null, loading: false, error: null } as AuthState,
+  reducers: {
+    logout(state) { state.user = null; }, // Immer lets you "mutate"
+    setUser(state, action: PayloadAction&lt;User&gt;) { state.user = action.payload; },
+  },
+  extraReducers: builder =&gt; {
+    builder
+      .addCase(loginThunk.pending, state =&gt; { state.loading = true; state.error = null; })
+      .addCase(loginThunk.fulfilled, (state, action) =&gt; {
+        state.loading = false;
+        state.user = action.payload;
+      })
+      .addCase(loginThunk.rejected, (state, action) =&gt; {
+        state.loading = false;
+        state.error = action.error.message ?? 'Login failed';
+      });
+  },
+});
+
+export const { logout, setUser } = authSlice.actions;
+export default authSlice.reducer;</code></pre>
+
+  <h2>JavaScript Deep Questions</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> What is a closure? Give a real example from React Native.</div>
+    <div class="qa-a">
+      <p>A closure is a function that <strong>remembers the variables from its outer scope</strong> even after that outer function has returned.</p>
+      <p>In React, every render creates new closures. A stale closure happens when a callback captures an old value of a variable because it was created in a previous render — this is the classic <code>useEffect</code> + <code>setInterval</code> bug.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// Classic stale closure — the bug you fixed in the interview!
+useEffect(() => {
+  const id = setInterval(() => {
+    console.log(count); // ❌ always logs 0 — captured the initial value
+    setCount(count + 1); // ❌ always sets 1
+  }, 1000);
+  return () => clearInterval(id);
+}, []); // empty deps = closure captures count=0 forever
+
+// Fix: functional update breaks the stale closure
+useEffect(() => {
+  const id = setInterval(() => {
+    setCount(c => c + 1); // ✅ c is always the latest value
+  }, 1000);
+  return () => clearInterval(id);
+}, []);</code></pre>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> What is the Event Loop? How does it relate to React Native?</div>
+    <div class="qa-a">
+      <p>JavaScript is single-threaded. The <strong>Event Loop</strong> picks tasks from the <strong>task queue</strong> (macrotasks: setTimeout, setInterval) and microtasks (Promises, .then) and runs them one at a time on the call stack.</p>
+      <p>Microtasks run before the next macrotask. So a chain of <code>.then()</code> calls all execute before the next <code>setTimeout</code> fires.</p>
+      <p>In React Native, the JS thread runs the Event Loop. If you do heavy computation synchronously (like parsing a huge JSON), it blocks the loop → no re-renders, no touch events → UI freezes. Solution: break work into chunks with <code>InteractionManager.runAfterInteractions</code> or use a background thread via <code>react-native-worker</code>.</p>
+    </div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> What is the difference between == and ===?</div>
+    <div class="qa-a">
+      <p><code>===</code> (strict equality) checks value AND type. <code>==</code> (loose equality) does type coercion first. Always use <code>===</code> in production code. Examples: <code>0 == false</code> is <code>true</code>, <code>0 === false</code> is <code>false</code>. <code>null == undefined</code> is <code>true</code>, <code>null === undefined</code> is <code>false</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="scalability">
+  <h1>16. Round 2 Prep — System Scalability</h1>
+  <p>If there's a second interview, expect system design questions focused on how you build apps that scale under load. These are common for senior roles at AI/audio companies like CNTXT.</p>
+
+  <div class="box box-navy">
+    <strong>What "scalable" means in mobile context:</strong> The app stays fast, responsive, and correct as users grow (more users hitting the same API), data grows (10k messages in a list vs 100), and features grow (adding screens without breaking performance).
+  </div>
+
+  <h2>API & Data Layer</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> How would you design a scalable transcription history screen that shows 100k+ messages?</div>
+    <div class="qa-a">
+      <p><strong>Never load all data at once.</strong> Use <strong>cursor-based pagination</strong> (not page numbers — pages break when items are added). Fetch 20–50 items at a time, load more as user scrolls near the bottom (<code>FlatList.onEndReachedThreshold</code>).</p>
+      <p>Use <strong>React Query</strong> with <code>useInfiniteQuery</code> — it manages page cursor, loading states, and cache automatically. Cache the first page aggressively (<code>staleTime: 5 * 60 * 1000</code>). For search, debounce the input (300ms) before firing a new query.</p>
+      <p>On the list itself: use <strong>FlashList</strong> (not FlatList) for large lists — it recycles fewer ViewHolders and has better performance. Provide <code>estimatedItemSize</code> so it doesn't measure every row.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// Scalable infinite list with React Query + FlashList
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { FlashList } from '@shopify/flash-list';
+
+const fetchTranscriptions = async ({ pageParam = null }) => {
+  const res = await api.get('/transcriptions', {
+    params: { cursor: pageParam, limit: 30 },
+  });
+  return res.data; // { items: [], nextCursor: 'abc123' | null }
+};
+
+const TranscriptionListScreen = () => {
+  const {
+    data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading,
+  } = useInfiniteQuery({
+    queryKey: ['transcriptions'],
+    queryFn: fetchTranscriptions,
+    getNextPageParam: lastPage =&gt; lastPage.nextCursor ?? undefined,
+    staleTime: 5 * 60 * 1000, // 5 min cache
+  });
+
+  const items = data?.pages.flatMap(p =&gt; p.items) ?? [];
+
+  return (
+    &lt;FlashList
+      data={items}
+      estimatedItemSize={72}
+      renderItem={({ item }) =&gt; &lt;TranscriptionRow item={item} /&gt;}
+      keyExtractor={item =&gt; item.id}
+      onEndReached={() =&gt; hasNextPage &amp;&amp; fetchNextPage()}
+      onEndReachedThreshold={0.3}
+      ListFooterComponent={isFetchingNextPage ? &lt;ActivityIndicator /&gt; : null}
+    /&gt;
+  );
+};</code></pre>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> How would you handle offline-first in a transcription app?</div>
+    <div class="qa-a">
+      <p><strong>Architecture:</strong> Write to local storage first (MMKV or SQLite), then sync to server in the background. Show local data immediately — don't wait for API.</p>
+      <p><strong>Tools:</strong> MMKV for fast key-value (Redux persist). WatermelonDB or SQLite for relational/queryable data at scale. React Query's <code>mutationCache</code> or TanStack Query's <code>onlineMutations</code> for retry when network comes back.</p>
+      <p><strong>Conflict resolution:</strong> Use timestamps — server wins for conflicts older than X seconds, client wins for very recent changes. Or use operational transforms if concurrent editing is needed (complex — usually not needed in audio apps).</p>
+    </div>
+  </div>
+
+  <h2>State Management at Scale</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> Redux vs Zustand — how do you choose?</div>
+    <div class="qa-a">
+      <table>
+        <tr><th></th><th>Redux Toolkit</th><th>Zustand</th></tr>
+        <tr><td><strong>Boilerplate</strong></td><td>More (slices, actions, reducers)</td><td>Minimal</td></tr>
+        <tr><td><strong>DevTools</strong></td><td>Excellent Redux DevTools</td><td>Basic (zustand devtools middleware)</td></tr>
+        <tr><td><strong>Scale</strong></td><td>Better for large teams (enforced patterns)</td><td>Better for small teams/apps</td></tr>
+        <tr><td><strong>Async</strong></td><td>createAsyncThunk built in</td><td>You write async in the store action</td></tr>
+        <tr><td><strong>When to use</strong></td><td>Large app, multiple devs, complex async flows</td><td>Simple global state, fast prototyping</td></tr>
+      </table>
+      <p>For CNTXT: Redux Toolkit is safer at scale because it enforces structure. Zustand is fine if the team is small and the state is simple.</p>
+    </div>
+  </div>
+
+  <h2>Real-Time at Scale</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> How would you scale real-time transcription for 10,000 concurrent users?</div>
+    <div class="qa-a">
+      <p>This is a backend + mobile architecture question. On mobile, you have no control over backend scale — your job is to handle failures gracefully. But show you understand the system:</p>
+      <p><strong>Backend side (show awareness):</strong> WebSocket servers don't scale horizontally easily because each connection is sticky. Solutions: use a pub/sub layer (Redis Pub/Sub, Kafka) behind the WebSocket servers so any server can broadcast to any client. Or use a managed service (Pusher, Ably, AWS API Gateway WebSockets).</p>
+      <p><strong>Mobile side:</strong></p>
+      <ul>
+        <li>Reconnect with <strong>exponential backoff</strong> on disconnect</li>
+        <li>Buffer messages while offline, flush on reconnect</li>
+        <li>Don't render every message as it arrives — batch updates (<code>unstable_batchedUpdates</code> or React 18 auto-batching)</li>
+        <li>Use a <strong>virtual list</strong> (FlashList) so 10k messages don't kill memory</li>
+      </ul>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// Resilient WebSocket with exponential backoff
+class TranscriptionSocket {
+  private ws: WebSocket | null = null;
+  private retryDelay = 1000;
+  private maxDelay = 30_000;
+
+  connect(url: string, onMessage: (data: string) => void) {
+    this.ws = new WebSocket(url);
+
+    this.ws.onmessage = e => onMessage(e.data);
+
+    this.ws.onclose = () => {
+      console.log(`Reconnecting in ${this.retryDelay}ms...`);
+      setTimeout(() => {
+        this.retryDelay = Math.min(this.retryDelay * 2, this.maxDelay); // backoff
+        this.connect(url, onMessage);
+      }, this.retryDelay);
+    };
+
+    this.ws.onopen = () => {
+      this.retryDelay = 1000; // reset on successful connection
+    };
+  }
+
+  disconnect() { this.ws?.close(); }
+  send(data: string) { this.ws?.send(data); }
+}</code></pre>
+
+  <h2>Database Scalability</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> How do you scale a database for a transcription app with millions of rows?</div>
+    <div class="qa-a">
+      <p><strong>Indexing:</strong> Index columns you query on. For transcriptions: index <code>user_id</code>, <code>created_at</code>, and <code>session_id</code>. Without indexes, a query on 10M rows is a full table scan.</p>
+      <p><strong>Pagination:</strong> Always paginate. Cursor-based is faster than OFFSET at scale (OFFSET N scans N rows to skip them).</p>
+      <p><strong>Partitioning:</strong> Split a huge table by time range (e.g., one partition per month). Queries that filter by date only scan the relevant partition.</p>
+      <p><strong>Read replicas:</strong> Route read queries (search, list) to read replicas. Write queries (insert transcription) go to the primary. This scales read-heavy workloads horizontally.</p>
+      <p><strong>Caching:</strong> Cache frequently accessed data in Redis. User profile, recent session list — these don't change every request.</p>
+      <p><strong>CDN for audio:</strong> Never serve audio files from your API server. Store in S3/GCS, serve via CloudFront CDN. The CDN edge is geographically close to users.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<section id="security">
+  <h1>17. Round 2 Prep — Security Best Practices</h1>
+  <p>Security questions in mobile interviews focus on: how you store sensitive data, how you protect API calls, and how you prevent common mobile vulnerabilities.</p>
+
+  <div class="box box-red">
+    <strong>Biggest mistake:</strong> Storing tokens in AsyncStorage. It is unencrypted and readable by any app on a rooted device. Always use the Keychain.
+  </div>
+
+  <h2>Secure Storage</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-hard">HARD</span> Where do you store auth tokens in React Native? Why not AsyncStorage?</div>
+    <div class="qa-a">
+      <p><strong>AsyncStorage</strong> is stored as plain text on disk. On a jailbroken/rooted device any app can read it. Never store auth tokens, passwords, or PII there.</p>
+      <p><strong>Use <code>expo-secure-store</code> (Expo) or <code>react-native-keychain</code> (bare).</strong> These use the iOS Keychain (hardware-backed on devices with Secure Enclave) and Android Keystore. Data is encrypted at rest and only accessible to your app.</p>
+      <p>For non-sensitive config (theme, language preference): AsyncStorage is fine. For anything sensitive: Keychain only.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// ❌ NEVER do this for tokens
+import AsyncStorage from '@react-native-async-storage/async-storage';
+await AsyncStorage.setItem('auth_token', token); // plain text on disk
+
+// ✅ Correct: expo-secure-store (encrypted, hardware-backed)
+import * as SecureStore from 'expo-secure-store';
+
+export const tokenService = {
+  async save(token: string) {
+    await SecureStore.setItemAsync('auth_token', token);
+  },
+  async get(): Promise&lt;string | null&gt; {
+    return SecureStore.getItemAsync('auth_token');
+  },
+  async remove() {
+    await SecureStore.deleteItemAsync('auth_token');
+  },
+};
+
+// Usage in auth slice
+export const loginThunk = createAsyncThunk('auth/login', async (creds) => {
+  const res = await authService.login(creds);
+  await tokenService.save(res.data.token); // ✅ stored securely
+  return res.data.user;
+});</code></pre>
+
+  <h2>API Security</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> How do you securely attach tokens to API requests?</div>
+    <div class="qa-a">
+      <p>Use an <strong>Axios interceptor</strong> to attach the token to every request automatically. The token is read from secure storage once and cached in memory for the session — you don't want to read from Keychain on every request (it's async and has overhead).</p>
+      <p>For <strong>token refresh</strong>: intercept 401 responses, call the refresh endpoint, update the stored token, and retry the original request. If refresh fails, logout the user.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// Axios instance with auth + refresh interceptor
+import axios from 'axios';
+import { tokenService } from './tokenService';
+
+const api = axios.create({ baseURL: 'https://api.munsit.app' });
+
+// Attach token to every request
+api.interceptors.request.use(async config => {
+  const token = await tokenService.get();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Handle 401 → refresh → retry
+let isRefreshing = false;
+let queue: Array&lt;(token: string) =&gt; void&gt; = [];
+
+api.interceptors.response.use(
+  res =&gt; res,
+  async error =&gt; {
+    const original = error.config;
+    if (error.response?.status === 401 &amp;&amp; !original._retry) {
+      original._retry = true;
+
+      if (isRefreshing) {
+        // Queue requests while refresh is in progress
+        return new Promise(resolve =&gt; {
+          queue.push(token =&gt; { original.headers.Authorization = `Bearer ${token}`; resolve(api(original)); });
+        });
+      }
+
+      isRefreshing = true;
+      try {
+        const refreshToken = await tokenService.getRefresh();
+        const res = await axios.post('/auth/refresh', { refreshToken });
+        const newToken = res.data.token;
+        await tokenService.save(newToken);
+        queue.forEach(cb =&gt; cb(newToken));
+        queue = [];
+        original.headers.Authorization = `Bearer ${newToken}`;
+        return api(original);
+      } catch {
+        await tokenService.remove();
+        // dispatch logout action here
+        return Promise.reject(error);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+    return Promise.reject(error);
+  }
+);</code></pre>
+
+  <h2>Other Security Best Practices</h2>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> How do you prevent sensitive data appearing in app screenshots or the recent apps screen?</div>
+    <div class="qa-a">
+      <p>On iOS, use <code>FLAG_SECURE</code> equivalent — add a blur overlay when the app goes to background. On Android, set <code>FLAG_SECURE</code> on the window to prevent screenshots in the recent apps screen. In Expo, use <code>expo-screen-capture</code> to disable screenshots on sensitive screens (payment, PIN entry).</p>
+    </div>
+  </div>
+
+  <pre><code class="language-typescript">// expo-screen-capture — disable on sensitive screens
+import { usePreventScreenCapture } from 'expo-screen-capture';
+
+const PaymentScreen = () => {
+  usePreventScreenCapture(); // ✅ disables screenshot on this screen only
+  return &lt;View&gt;...&lt;/View&gt;;
+};</code></pre>
+
+  <div class="qa-block">
+    <div class="qa-q"><span class="tag tag-med">MED</span> What is SSL Pinning and when would you use it?</div>
+    <div class="qa-a">
+      <p>SSL Pinning means your app hard-codes the expected server certificate (or its public key hash). Even if an attacker installs a fake root CA on the device (man-in-the-middle), the app rejects the connection because the cert doesn't match the pinned one.</p>
+      <p>Use it for banking apps, health apps, or any app handling highly sensitive data. Downside: you must update the pin when the cert rotates (cert expiry), which requires an app release. For most apps, standard TLS is sufficient.</p>
+      <p>In React Native: use <code>react-native-ssl-pinning</code> or implement via <code>OkHttp CertificatePinner</code> on Android and <code>URLSession</code> delegate on iOS.</p>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Threat</th><th>Solution</th><th>Tool / API</th></tr>
+    <tr><td>Token theft from storage</td><td>Use encrypted Keychain</td><td>expo-secure-store / react-native-keychain</td></tr>
+    <tr><td>Man-in-the-middle attack</td><td>SSL Pinning</td><td>react-native-ssl-pinning</td></tr>
+    <tr><td>API key exposed in JS bundle</td><td>Never put secrets in JS — use server proxy or .env build vars</td><td>EAS Secrets, server-side proxy</td></tr>
+    <tr><td>Screenshot of sensitive data</td><td>Disable screen capture on sensitive screens</td><td>expo-screen-capture</td></tr>
+    <tr><td>Reverse engineering JS bundle</td><td>Enable Hermes, enable minification, use ProGuard on Android</td><td>metro.config.js minifier options</td></tr>
+    <tr><td>Insecure deep links</td><td>Verify deep link params — never trust URL params as auth</td><td>Validate on server, not client</td></tr>
+    <tr><td>XSS in WebView</td><td>Never load untrusted HTML, disable JS in WebView if not needed</td><td>WebView javaScriptEnabled={false}</td></tr>
+    <tr><td>Over-permission</td><td>Request only what you need, at the point of use</td><td>expo-permissions, Info.plist usage strings</td></tr>
+  </table>
+
+  <div class="box box-tip">
+    <strong>One-line answer if they ask "how do you secure an RN app":</strong> "Keychain for tokens, HTTPS everywhere, SSL pinning for sensitive endpoints, disable screen capture on payment/auth screens, and never put API secrets in the JS bundle — use EAS Secrets or a server-side proxy."
   </div>
 </section>
 
